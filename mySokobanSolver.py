@@ -34,7 +34,7 @@ def my_team():
     of triplet of the form (student_number, first_name, last_name)
     
     '''
-#    return [ (1234567, 'Ada', 'Lovelace'), (1234568, 'Grace', 'Hopper'), (1234569, 'Eva', 'Tardos') ]
+    return [ (10107321, 'Ho Fong', 'Law'), (1234568, 'Grace', 'Hopper'), (1234569, 'Eva', 'Tardos') ]
     raise NotImplementedError()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -61,8 +61,37 @@ def taboo_cells(warehouse):
        The returned string should NOT have marks for the worker, the targets,
        and the boxes.  
     '''
-    ##         "INSERT YOUR CODE HERE"    
-    raise NotImplementedError()
+    X,Y = zip(*warehouse.walls) # pythonic version of the above
+    x_size, y_size = 1+max(X), 1+max(Y)
+    
+    xSymbolList = []
+    strPuzzle = [[" "] * x_size for y in range(y_size)]
+    
+    for (x,y) in warehouse.walls:
+            strPuzzle[y][x] = "#"
+            
+    for x in range(warehouse.ncols):
+        for y in range(warehouse.nrows):
+            if not [x,y] in warehouse.walls and not [x,y] in warehouse.targets:
+                if [x-1,y] in warehouse.walls or [x-1,y] in xSymbolList:
+                    if [x,y-1] in warehouse.walls or [x,y-1] in xSymbolList:
+                        xSymbolList.append([x,y]) 
+                        break
+                    if [x,y+1] in warehouse.walls or [x,y+1] in xSymbolList:
+                        xSymbolList.append([x,y])  
+                        break
+                if [x+1,y] in warehouse.walls or [x+1,y] in xSymbolList:
+                    if [x,y-1] in warehouse.walls or [x,y-1] in xSymbolList:
+                        xSymbolList.append([x,y]) 
+                        break
+                    if [x,y+1] in warehouse.walls or [x,y+1] in xSymbolList:
+                        xSymbolList.append([x,y])  
+                        break
+                    
+    for (x,y) in xSymbolList:
+            strPuzzle[y][x] = "X"
+    
+    return "\n".join(["".join(line) for line in strPuzzle])
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
