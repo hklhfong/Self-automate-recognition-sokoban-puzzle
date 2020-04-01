@@ -146,17 +146,36 @@ class SokobanPuzzle(search.Problem):
         what type of list of actions is to be returned.
         """
         
-        if self.allow_taboo_push:
-            return  legal moves
-        else:
-            return no taboo cells
-        
-        
+        listOfActions = []
         if self.macro:
-            return macro
+            for sequence in solve_sokoban_macro(self):
+                if check_elem_action_seq(self,sequence) == 'Impossible':
+                    break
+                elif check_elem_action_seq(self,sequence):
+                    if self.allow_taboo_push:
+                        listOfActions.append(sequence)
+                    else:
+                        #taboo check 
+                else:
+                    if self.allow_taboo_push:
+                        listOfActions.append(sequence)
+                    else:
+                        #taboo check 
         else:
-            return elementary 
-
+            for sequence in solve_sokoban_elem(self):
+                if check_elem_action_seq(self,sequence) == 'Impossible':
+                    break
+                elif check_elem_action_seq(self,sequence):
+                    if self.allow_taboo_push:
+                        listOfActions.append(sequence)
+                    else:
+                        #taboo check 
+                else:
+                    if self.allow_taboo_push:
+                        listOfActions.append(sequence)
+                    else:
+                        #taboo check 
+        return listOfActions
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def check_elem_action_seq(warehouse, action_seq):
@@ -269,7 +288,7 @@ def can_go_there(warehouse, dst):
       False otherwise
     '''
     
-    ##         "INSERT YOUR CODE HERE"
+    
     
     raise NotImplementedError()
 
