@@ -130,7 +130,12 @@ class SokobanPuzzle(search.Problem):
 
     
     def __init__(self, warehouse):
-        raise NotImplementedError()
+        self.allow_taboo_push = True
+        self.macro = True
+        self.walls = warehouse.walls
+        self.targets = warehouse.targets
+        self.boxes = warehouse.boxes
+        self.worker = warehouse.worker
 
     def actions(self, state):
         """
@@ -140,7 +145,17 @@ class SokobanPuzzle(search.Problem):
         'self.allow_taboo_push' and 'self.macro' should be tested to determine
         what type of list of actions is to be returned.
         """
-        raise NotImplementedError
+        
+        if self.allow_taboo_push:
+            return  legal moves
+        else:
+            return no taboo cells
+        
+        
+        if self.macro:
+            return macro
+        else:
+            return elementary 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -168,11 +183,55 @@ def check_elem_action_seq(warehouse, action_seq):
                string returned by the method  Warehouse.__str__()
     '''
     
-    ##         "INSERT YOUR CODE HERE"
+    vaild = True
+    for step in action_seq:
+        x = warehouse.worker[0]
+        y = warehouse.worker[1]
+        if step == 'Left':
+            if [x-1,y] in warehouse.boxes:
+                if [x-2,y] in warehouse.boxes:
+                    vaild = False
+                    break
+            elif [x-1,y] in warehouse.walls:
+                vaild = False
+                break
+            else:
+                x = x-1
+        if step == 'Right':
+            if [x+1,y] in warehouse.boxes:
+                if [x+2,y] in warehouse.boxes:
+                    vaild = False
+                    break
+            elif [x+1,y] in warehouse.walls:
+                vaild = False
+                break
+            else:
+                x = x+1
+        if step == 'Up':
+            if [x,y-1] in warehouse.boxes:
+                if [x,y-2] in warehouse.boxes:
+                    vaild = False
+                    break
+            elif [x,y-1] in warehouse.walls:
+                vaild = False
+                break
+            else:
+                y = y-1
+        if step == 'Down':
+            if [x,y+1] in warehouse.boxes:
+                if [x,y+2] in warehouse.boxes:
+                    vaild = False
+                    break
+            elif [x,y+1] in warehouse.walls:
+                vaild = False
+                break
+            else:
+                y = y-2
+    if vaild:
+        return warehouse.__str__()
+    else:
+        return "Impossible"
     
-    raise NotImplementedError()
-
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def solve_sokoban_elem(warehouse):
