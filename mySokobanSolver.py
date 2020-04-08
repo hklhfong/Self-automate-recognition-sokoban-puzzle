@@ -23,8 +23,8 @@ This is not negotiable!
 # with these files
 import search 
 import sokoban
-
-
+import random, time
+import direction
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -34,7 +34,7 @@ def my_team():
     of triplet of the form (student_number, first_name, last_name)
     
     '''
-    return [ (10107321, 'Ho Fong', 'Law'), (1234568, 'Grace', 'Hopper'), (1234569, 'Eva', 'Tardos') ]
+    return [ (10107321, 'Ho Fong', 'Law'), (1234568, 'Kiki', 'Mutiara'), (1234569, 'Vincentius', 'Herdian Sungkono') ]
     raise NotImplementedError()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -94,7 +94,43 @@ def taboo_cells(warehouse):
     return "\n".join(["".join(line) for line in strPuzzle])
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def read_taboo_cells(taboo_cells_str):
+    '''
+    Parameters
+    ----------
+    taboo_cells_str : string
+        A warehouse string version onyl with taboo and walls.
 
+    Raises
+    ------
+    ValueError
+        When wall is empty raise error.
+
+    Returns
+    -------
+    list
+        A list that represent taboo position exmaple :[[x,y]...[xn,yn]].
+
+    '''
+    lines = taboo_cells_str.split(sep='\n')    
+    first_row_brick, first_column_brick = None, None
+    for row, line in enumerate(lines):
+        brick_column = line.find('#')
+        if brick_column>=0: 
+            if  first_row_brick is None:
+                first_row_brick = row # found first row with a brick
+            if first_column_brick is None:
+                first_column_brick = brick_column
+            else:
+                first_column_brick = min(first_column_brick, brick_column)
+    if first_row_brick is None:
+        raise ValueError('Warehouse with no walls!')
+    # compute the canonical representation
+    # keep only the lines that contain walls
+    canonical_lines = [line[first_column_brick:] 
+                       for line in lines[first_row_brick:] if line.find('#')>=0]
+    return list(sokoban.find_2D_iterator(canonical_lines, "X"))    
+              
 
 class SokobanPuzzle(search.Problem):
     '''
@@ -129,13 +165,12 @@ class SokobanPuzzle(search.Problem):
     #     to satisfy the interface of 'search.Problem'.
 
     
-    def __init__(self, warehouse):
-        self.allow_taboo_push = True
-        self.macro = True
-        self.walls = warehouse.walls
-        self.targets = warehouse.targets
-        self.boxes = warehouse.boxes
-        self.worker = warehouse.worker
+    def __init__(self, initial=None, goal=None, allow_taboo_push=False, macro=False):
+     
+        self.goal = goal #assumen it represent warehouse class
+        self.initial = initial #assumen it also represent warehouse class
+        self.allow_taboo_push = allow_taboo_push
+        self.macro = macro
 
     def actions(self, state):
         """
@@ -145,37 +180,103 @@ class SokobanPuzzle(search.Problem):
         'self.allow_taboo_push' and 'self.macro' should be tested to determine
         what type of list of actions is to be returned.
         """
-        
         listOfActions = []
-        if self.macro:
-            for sequence in solve_sokoban_macro(self):
-                if check_elem_action_seq(self,sequence) == 'Impossible':
-                    break
-                elif check_elem_action_seq(self,sequence):
-                    if self.allow_taboo_push:
-                        listOfActions.append(sequence)
-                    else:
-                        #taboo check 
-                else:
-                    if self.allow_taboo_push:
-                        listOfActions.append(sequence)
-                    else:
-                        #taboo check 
-        else:
-            for sequence in solve_sokoban_elem(self):
-                if check_elem_action_seq(self,sequence) == 'Impossible':
-                    break
-                elif check_elem_action_seq(self,sequence):
-                    if self.allow_taboo_push:
-                        listOfActions.append(sequence)
-                    else:
-                        #taboo check 
-                else:
-                    if self.allow_taboo_push:
-                        listOfActions.append(sequence)
-                    else:
-                        #taboo check 
+        # if self.macro:
+        #     for sequence in solve_sokoban_macro(self):
+        #         if check_elem_action_seq(self,sequence) == 'Impossible':
+        #             break
+        #         elif check_elem_action_seq(self,sequence):
+        #             if self.allow_taboo_push:
+        #                 listOfActions.append(sequence)
+        #             else:
+        #                 y = sequence[0][0]
+        #                 x = sequence[0][1]
+        #                 if sequence[1] == 'Left':
+        #                     if [x-1,y] == 
+                        
+        #                 #taboo check and del break
+        #                 break
+        #         else:
+        #             if self.allow_taboo_push:
+        #                 listOfActions.append(sequence)
+        #             else:
+        #                 #taboo check and del break 
+        #                 break
+        # else:
+        #     for sequence in solve_sokoban_elem(self):
+        #         if check_elem_action_seq(self,sequence) == 'Impossible':
+        #             break
+        #         elif check_elem_action_seq(self,sequence):
+        #             if self.allow_taboo_push:
+        #                 listOfActions.append(sequence)
+        #             else:
+        #                 #taboo check and del break
+        #                 break
+        #         else:
+        #             if self.allow_taboo_push:
+        #                 listOfActions.append(sequence)
+        #             else:
+        #                 #taboo check and del break
+        #                 break
+        transition_cost = 1
+
+        for direct in (UP, RIGHT, DOWN, LEFT):
+            new_position = direction.way.go(list(state.worker))
+            
+            if new_position[0] < 0 or new_position[0] >= state.ncols - 1:
+                continue
+            if new_position[1] < 0 or new_position[1] >= state.nrows - 1:
+                continue
+            if new_position in state.walls:
+                continue
+                            
+
+            if new_position in state.boxes:
+                new_box_position = direction.way.go(new_position)
+                
+                if new_box_position[0] < 0 or new_box_position[0] >= state.ncols - 1:
+                    continue
+                if new_box_position[1] < 0 or new_box_position[1] >= state.nrows - 1:
+                    continue
+                if new_position in state.walls:
+                    continue
+                if new_box_position in state.boxes:
+                    continue
+                if not state.allow_taboo_push:
+                    if new_box_position in read_taboo_cells(taboo_cells(state)):
+                        continue
+
+        new_state = state.copy(tuple(new_position),new_box_position)
+        listOfActions.append(new_state)
+
         return listOfActions
+    
+    
+    def result(self, state, action):
+        """Return the state that results from executing the given
+        action in the given state. The action must be one of
+        self.actions(state)."""
+        assert action in self.actions(state)
+        return tuple( list(state[:action])+list(reversed(state[action:])) )
+
+    def goal_test(self, state):
+        """Return True if the state is a goal. The default method compares the
+        state to self.goal, as specified in the constructor. Override this
+        method if checking against a single self.goal is not enough."""
+        return state == self.goal
+
+    def path_cost(self, c, state1, action, state2):
+        """Return the cost of a solution path that arrives at state2 from
+        state1 via action, assuming cost c to get up to state1. If the problem
+        is such that the path doesn't matter, this function will only look at
+        state2.  If the path does matter, it will consider c and maybe state1
+        and action. The default method costs 1 for every step in the path."""
+        return c + 1
+
+    def value(self, state):
+        """For optimization problems, each state has a value.  Hill-climbing
+        and related algorithms try to maximize this value."""
+        raise NotImplementedError
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def check_elem_action_seq(warehouse, action_seq):
@@ -269,11 +370,15 @@ def solve_sokoban_elem(warehouse):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
-    
-    ##         "INSERT YOUR CODE HERE"
-    
-    raise NotImplementedError()
 
+    t0 = time.time
+    sol_ts = search.astar_graph_search(warehouse)  # graph search version
+    t1 = time.time()
+    print ('BFS Solver took {:.6f} seconds'.format(t1-t0))
+    if sol_ts == None:
+        return 'Impossible'
+    else:
+        return sol_ts.path()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def can_go_there(warehouse, dst):
@@ -355,3 +460,7 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+UP = direction.way("Up", (0, -1))
+RIGHT = direction.way("Right", (1, 0))
+DOWN = direction.way("Down", (0, 1))
+LEFT = direction.way("left", (-1, 0))
