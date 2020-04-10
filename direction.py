@@ -10,7 +10,7 @@ class Way:
     A direction of movement.
     """
     
-    def __init__(self, stack, name):
+    def __init__(self, name, stack):
         """
         Creates a new direction.
         @param name: The direction's name.

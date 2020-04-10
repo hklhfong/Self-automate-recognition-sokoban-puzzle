@@ -35,7 +35,6 @@ def my_team():
     
     '''
     return [ (10107321, 'Ho Fong', 'Law'), (1234568, 'Kiki', 'Mutiara'), (1234569, 'Vincentius', 'Herdian Sungkono') ]
-    raise NotImplementedError()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -181,43 +180,6 @@ class SokobanPuzzle(search.Problem):
         what type of list of actions is to be returned.
         """
         listOfActions = []
-        # if self.macro:
-        #     for sequence in solve_sokoban_macro(self):
-        #         if check_elem_action_seq(self,sequence) == 'Impossible':
-        #             break
-        #         elif check_elem_action_seq(self,sequence):
-        #             if self.allow_taboo_push:
-        #                 listOfActions.append(sequence)
-        #             else:
-        #                 y = sequence[0][0]
-        #                 x = sequence[0][1]
-        #                 if sequence[1] == 'Left':
-        #                     if [x-1,y] == 
-                        
-        #                 #taboo check and del break
-        #                 break
-        #         else:
-        #             if self.allow_taboo_push:
-        #                 listOfActions.append(sequence)
-        #             else:
-        #                 #taboo check and del break 
-        #                 break
-        # else:
-        #     for sequence in solve_sokoban_elem(self):
-        #         if check_elem_action_seq(self,sequence) == 'Impossible':
-        #             break
-        #         elif check_elem_action_seq(self,sequence):
-        #             if self.allow_taboo_push:
-        #                 listOfActions.append(sequence)
-        #             else:
-        #                 #taboo check and del break
-        #                 break
-        #         else:
-        #             if self.allow_taboo_push:
-        #                 listOfActions.append(sequence)
-        #             else:
-        #                 #taboo check and del break
-        #                 break
         transition_cost = 1
 
         for direct in (UP, RIGHT, DOWN, LEFT):
@@ -256,8 +218,22 @@ class SokobanPuzzle(search.Problem):
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
-        assert action in self.actions(state)
-        return tuple( list(state[:action])+list(reversed(state[action:])) )
+        
+        before_box_location = action[0]
+        
+        state.boxes.remove(before_box_location)
+        state.worker = before_box_location
+        
+        if action[1] == "Right":
+            state.boxes.append(RIGHT.go(before_box_location))
+        elif action[1] == "Left":
+            state.boxes.append(LEFT.go(before_box_location))
+        elif action[1] == "Up":
+            state.boxes.append(UP.go(before_box_location))
+        elif action[1] == "Down":
+            state.boxes.append(DOWN.go(before_box_location))
+
+        return state
 
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
@@ -273,10 +249,21 @@ class SokobanPuzzle(search.Problem):
         and action. The default method costs 1 for every step in the path."""
         return c + 1
 
-    def value(self, state):
-        """For optimization problems, each state has a value.  Hill-climbing
-        and related algorithms try to maximize this value."""
-        raise NotImplementedError
+    def h(self, n):
+    	"""
+    	"""
+    	heur = 0
+    	for box in n.state.boxes:
+    		#Find closest target
+    		closest_target = n.state.targets[0]
+    		for target in n.state.targets:
+    			if (mDist(target, box) < mDist(closest_target, box)):
+    				closest_target = target
+    				
+    		#Update Heuristic
+    		heur = heur + mDist(closest_target, box)              
+    
+    	return heur
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def check_elem_action_seq(warehouse, action_seq):
@@ -392,10 +379,25 @@ def can_go_there(warehouse, dst):
       True if the worker can walk to cell dst=(row,column) without pushing any box
       False otherwise
     '''
-    
-    
-    
-    raise NotImplementedError()
+    frontier = set()
+    explored = set()
+    frontier.add(warehouse.worker)
+
+    while frontier:
+        curr_position = frontier.pop()
+        if curr_position == (dst[1],dst[0]):
+            return True
+        explored.add(curr_position)
+        
+        for direct in (UP, RIGHT, DOWN, LEFT):
+            new_position = direction.way.go(list(warehouse.worker))
+            
+            if (new_position not in frontier and 
+                new_position not in explored and
+                new_position not in warehouse.walls and 
+                new_position not in warehouse.boxes):
+                frontier.add(new_position)
+    return False
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -422,9 +424,26 @@ def solve_sokoban_macro(warehouse):
         If the puzzle is already in a goal state, simply return []
     '''
     
-    ##         "INSERT YOUR CODE HERE"
+    if warehouse.targets == warehouse.boxes:
+        return []
     
-    raise NotImplementedError()
+    # sokoban_macro = SokobanMacro(warehouse)
+    
+    results = search.astar_graph_search(warehouse)
+    if results == None:
+        return ['Impossible']
+    path = results.path()
+    solution = []
+    for node in path:
+        solution.append(node.action)
+    solution.remove(None)   
+    #convert (x,y) to (r,c)
+    macro_rc = []
+    for action in solution:
+        macro_rc.append(((action[0][1], action[0][0]), action[1]))
+    
+    return macro_rc
+
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
