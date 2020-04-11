@@ -65,41 +65,82 @@ def taboo_cells(warehouse):
     
     xSymbolList = []
     strPuzzle = [[" "] * x_size for y in range(y_size)]
-    wall_counter = 0
+    first_row_wall = 0
+    first_col_wall = 0
+    left_walls = []
+    right_walls = []
+    top_walls = []
+    bottom_walls = []
     
     
     for (x,y) in warehouse.walls:
             strPuzzle[y][x] = "#"
             
-    for x in range(warehouse.nrows):
-        for y in range(warehouse.ncols):
-            if (x,y) in warehouse.walls:
-                wall_counter = (wall_counter + 1) % 2
+    for y in range(warehouse.nrows):
+        first_col_wall = True
+        for x in range(warehouse.ncols):
+            if (x,y) in warehouse.walls and first_col_wall:
+                first_col_wall = False
+                left_walls.append([x,y])
+            if x == warehouse.ncols - 1:
+                temp_col = x
+                # for col in range(warehouse.ncols):
+                while True:
+                    if (temp_col,y) in warehouse.walls:
+                        break
+                    temp_col = temp_col - 1
+                right_walls.append([temp_col,y])
+                
+    
+    for x in range(warehouse.ncols):
+        first_row_wall = True
+        for y in range(warehouse.nrows):
+            if (x,y) in warehouse.walls and first_row_wall:
+                first_row_wall = False
+                top_walls.append([x,y])
+            if y == warehouse.nrows - 1:
+                temp_row = y
+                # for row in range(warehouse.nrows):   
+                while True:
+                    if (x,temp_row) in warehouse.walls:
+                        break
+                    temp_row = temp_row - 1
+                bottom_walls.append([x,temp_row])
             
-            
+    for y in range(warehouse.nrows):
+        for x in range(warehouse.ncols):  
             if not (x,y) in warehouse.walls and not (x,y) in warehouse.targets:
                 if (x-1,y) in warehouse.walls or (x-1,y) in xSymbolList:
                     if (x,y-1) in warehouse.walls or (x,y-1) in xSymbolList:
-                        if wall_counter:
                             xSymbolList.append([x,y])
                             continue
                     if (x,y+1) in warehouse.walls or (x,y+1) in xSymbolList:
-                        if wall_counter:
                             xSymbolList.append([x,y])  
                             continue
                 if (x+1,y) in warehouse.walls or (x+1,y) in xSymbolList:
-                    if (x,y-1) in warehouse.walls or (x,y-1) in xSymbolList:
-                        if wall_counter:    
+                    if (x,y-1) in warehouse.walls or (x,y-1) in xSymbolList:  
                             xSymbolList.append([x,y]) 
                             continue
                     if (x,y+1) in warehouse.walls or (x,y+1) in xSymbolList:
-                        if wall_counter:
                             xSymbolList.append([x,y])  
                             continue
-                    
+                        
+                        
+    # for (x,y) in xSymbolList:
+    #       strPuzzle[y][x] = "X"
+                        
+                        
     for (x,y) in xSymbolList:
-            strPuzzle[y][x] = "X"
-    
+        for (left_col,left_row) in left_walls:
+            if x > left_col and left_row == y:
+                for(right_col,right_row) in right_walls:
+                    if x < right_col and right_row == y:
+                        for (top_col,top_row) in top_walls:
+                            if y > top_row and top_col == x:
+                                for (bottom_col,bottom_row) in bottom_walls:
+                                    if y < bottom_row and bottom_col == x:
+                                        strPuzzle[y][x] = "X"
+                    
     return "\n".join(["".join(line) for line in strPuzzle])
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
