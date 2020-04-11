@@ -16,7 +16,7 @@ from sokoban import Warehouse
 
 from mySokobanSolver import my_team, taboo_cells, SokobanPuzzle, check_elem_action_seq
 from mySokobanSolver import (solve_sokoban_elem, can_go_there, 
-                               solve_sokoban_macro, solve_weighted_sokoban_elem )
+                                solve_sokoban_macro, solve_weighted_sokoban_elem )
 
 #from fredSokobanSolver import my_team, taboo_cells, SokobanPuzzle, check_elem_action_seq
 #from fredSokobanSolver import (solve_sokoban_elem, can_go_there, 
@@ -168,11 +168,11 @@ def test_solve_weighted_sokoban_elem():
 
 if __name__ == "__main__":
     pass    
-#    print(my_team())  # should print your team
+    print(my_team())  # should print your team
 
-#    test_taboo_cells() 
-#    test_check_elem_action_seq()
-#    test_solve_sokoban_elem()
-#    test_can_go_there()
-#    test_solve_sokoban_macro()   
-    test_solve_weighted_sokoban_elem()
+    test_taboo_cells() 
+    test_check_elem_action_seq()
+    test_solve_sokoban_elem()
+    test_can_go_there()
+    test_solve_sokoban_macro()   
+    # test_solve_weighted_sokoban_elem()
