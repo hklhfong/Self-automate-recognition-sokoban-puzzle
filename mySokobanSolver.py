@@ -342,55 +342,41 @@ def check_elem_action_seq(warehouse, action_seq):
                the sequence of actions.  This must be the same string as the
                string returned by the method  Warehouse.__str__()
     '''
-    
-    vaild = True
+    position_one = position_two = warehouse.worker
+
     for step in action_seq:
-        x = warehouse.worker[0]
-        y = warehouse.worker[1]
+        x, y = warehouse.worker
+        
         if step == 'Left':
-            if [x-1,y] in warehouse.boxes:
-                if [x-2,y] in warehouse.boxes:
-                    vaild = False
-                    break
-            elif [x-1,y] in warehouse.walls:
-                vaild = False
-                break
-            else:
-                x = x-1
-        if step == 'Right':
-            if [x+1,y] in warehouse.boxes:
-                if [x+2,y] in warehouse.boxes:
-                    vaild = False
-                    break
-            elif [x+1,y] in warehouse.walls:
-                vaild = False
-                break
-            else:
-                x = x+1
-        if step == 'Up':
-            if [x,y-1] in warehouse.boxes:
-                if [x,y-2] in warehouse.boxes:
-                    vaild = False
-                    break
-            elif [x,y-1] in warehouse.walls:
-                vaild = False
-                break
-            else:
-                y = y-1
-        if step == 'Down':
-            if [x,y+1] in warehouse.boxes:
-                if [x,y+2] in warehouse.boxes:
-                    vaild = False
-                    break
-            elif [x,y+1] in warehouse.walls:
-                vaild = False
-                break
-            else:
-                y = y-2
-    if vaild:
-        return warehouse.__str__()
-    else:
-        return "Impossible"
+            position_one = LEFT.go(position_one)
+            position_two = LEFT.go(position_one)
+            
+        elif step == 'Right':
+            position_one = RIGHT.go(position_one)
+            position_two = RIGHT.go(position_one)
+        
+        elif step == 'Up':
+            position_one = UP.go(position_one)
+            position_two = UP.go(position_one)
+        
+        elif step == 'Down':
+            position_one = DOWN.go(position_one)
+            position_two = DOWN.go(position_one)         
+        
+        if position_one in warehouse.walls:
+            return 'Impossible'
+
+        if position_one in warehouse.boxes:
+            if position_two in warehouse.boxes or position_two in warehouse.walls:
+                return 'Impossible'
+            warehouse.boxes.remove(position_one)
+            warehouse.boxes.append(position_two)
+
+        warehouse.worker = position_one 
+
+    return warehouse.__str__()
+    
+    
     
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
