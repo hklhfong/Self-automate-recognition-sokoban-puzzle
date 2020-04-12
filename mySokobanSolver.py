@@ -234,38 +234,63 @@ class SokobanPuzzle(search.Problem):
         what type of list of actions is to be returned.
         """
         listOfActions = []
-        # transition_cost = 1
+        
+        if self.macro:
+            for direct in (UP, RIGHT, DOWN, LEFT):
+                for (x,y) in state.boxes:
+                    if direct == UP:
+                        if not (x,y+1) in state.worker:
+                            continue
+                        if not direct.go(x,y) in state.walls:
+                            continue
+                        if not direct.go(x,y) in state.boxes:
+                            continue
+                    if direct == RIGHT:
+                        if not (x-1,y) in state.worker:
+                            continue
+                        if not direct.go(x,y) in state.walls:
+                            continue
+                        if not direct.go(x,y) in state.boxes:
+                            continue
+                    if direct == DOWN:
+                        if not (x,y-1) in state.worker:
+                            continue
+                        if not direct.go(x,y) in state.walls:
+                            continue
+                        if not direct.go(x,y) in state.boxes:
+                            continue
+                    if direct == LEFT:
+                        if not (x+1,y) in state.worker:
+                            continue
+                        if not direct.go(x,y) in state.walls:
+                            continue
+                        if not direct.go(x,y) in state.boxes:
+                            continue
+                    listOfActions.append((x,y),direct.__str__())
 
-        for direct in (UP, RIGHT, DOWN, LEFT):
-            new_position = direct.go(list(state.worker))
+            return listOfActions
             
-            if new_position[0] < 0 or new_position[0] >= state.ncols - 1:
-                continue
-            if new_position[1] < 0 or new_position[1] >= state.nrows - 1:
-                continue
-            if new_position in state.walls:
-                continue
-                            
-
-            if new_position in state.boxes:
-                new_box_position = direct.go(new_position)
+        else:    
+            for direct in (UP, RIGHT, DOWN, LEFT):
+                new_position = direct.go(list(state.worker))
                 
-                if new_box_position[0] < 0 or new_box_position[0] >= state.ncols - 1:
-                    continue
-                if new_box_position[1] < 0 or new_box_position[1] >= state.nrows - 1:
-                    continue
+                
                 if new_position in state.walls:
                     continue
-                if new_box_position in state.boxes:
-                    continue
-                if not state.allow_taboo_push:
-                    if new_box_position in read_taboo_cells(taboo_cells(state)):
+                if new_position in state.boxes:
+                    new_box_position = direct.go(new_position)
+                    if new_box_position in state.walls:
                         continue
+                    if new_box_position in state.boxes:
+                        continue
+                    if not state.allow_taboo_push:
+                        if new_box_position in read_taboo_cells(taboo_cells(state)):
+                            continue
 
                 # new_state = state.copy(tuple(new_position),new_box_position)
                 listOfActions.append(direct.__str__())
 
-        return listOfActions
+            return listOfActions
     
     
     def result(self, state, action):
@@ -278,7 +303,7 @@ class SokobanPuzzle(search.Problem):
         if str_warehouse == 'Impossible':
             return str_warehouse
         
-        new_warehouse = sokoban.Warehouse.from_string(str_warehouse)
+        new_warehouse = state.copy.from_string(str_warehouse)
 
         return new_warehouse
 
@@ -286,7 +311,7 @@ class SokobanPuzzle(search.Problem):
         """Return True if the state is a goal. The default method compares the
         state to self.goal, as specified in the constructor. Override this
         method if checking against a single self.goal is not enough."""
-        return state == self.goal
+        return set(self.goal) == set(state.boxes) 
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -300,17 +325,26 @@ class SokobanPuzzle(search.Problem):
      	"""
      	"""
      	heur = 0
-     	for box in n.state.boxes:
+     	for box in n.boxes:
     		#Find closest target
-            closest_target = n.state.targets[0]
-            for target in n.state.targets:
-                if(mDist(target, box) < mDist(closest_target, box)):
-                    closest_targetet = target
+            closest_target = n.targets[0]
+            for target in n.targets:
+                 if(mDist(target, box) < mDist(closest_target, box)):
+                     closest_targetet = target
     				
-    		#updateHeuristic
+    		 #updateHeuristic
             heur = heur + mDist(closest_target, box)              
     
      	return heur
+             
+        # k = len(n.state)
+        # assert k == len(self.goal)
+        # misplaced = [x for i,x in enumerate(n.state) if x!=k-1-i]
+        # if misplaced:
+        #     # some elements misplaced
+        #     return 1+max(misplaced)
+        # else:
+        #     return 0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def mDist(loca_a, loca_b):
@@ -397,69 +431,27 @@ def solve_sokoban_elem(warehouse):
             If the puzzle is already in a goal state, simply return []
     '''
 
-    # t0 = time.time
-    # sol_ts = search.astar_graph_search(warehouse)  # graph search version
-    # t1 = time.time()
-    # print ('BFS Solver took {:.6f} seconds'.format(t1-t0))
-    # if sol_ts == None:
-    #     return 'Impossible'
-    # else:
-    #     return sol_ts.path()
+    puzzle = SokobanPuzzle(warehouse)
+
+    puzzleGoalState = warehouse.copy() 
+    puzzleSolution = search.breadth_first_graph_search(puzzle)
+    #puzzleSolution = depth_first_graph_search(puzzle)
+    #puzzleSolution = astar_graph_search(puzzle, get_Heuristic)
+    step_move_solution = []
+    step_move = []
     
-    elementary_actions = []
-
-    ##Load macro actions to execute from solve_sokoban_macro
-    ##Currently using test data
-    macro_actions = solve_sokoban_macro(warehouse)
-#    macro_actions = [((3, 6), 'Down'), ((3, 5), 'Down'), ((3, 4), 'Down')]
-
-    print("Initial State:")
-    print(warehouse)
-
-    for macro_action in macro_actions: #format is ((r, c), 'Direction')
-        #macro action is in ((r, c), 'Direction')
-        #warehouse.objects are in (x, y)
-        #Calculate the position the worker must be in to move the box
-        move_to = (macro_action[0][1], macro_action[0][0])
-        
-        if macro_action[1] == 'Left':
-            move_to = (move_to[0]+1, move_to[1])
-        elif macro_action[1] == 'Right':
-            move_to = (move_to[0]-1, move_to[1])
-        elif macro_action[1] == 'Up':
-            move_to = (move_to[0], move_to[1]+1)
-        elif macro_action[1] == 'Down':
-            move_to = (move_to[0], move_to[1]-1)
-            
-        #Create SokobanPuzzle object and set goal
-        sp = SokobanPuzzle(warehouse, goal = move_to)
-        if warehouse.worker == move_to:
-            #move worker in desired direction
-            warehouse = check_elem_action_seq(warehouse, [macro_action[1]])
-        else:
-            #move worker to desired location
-            sol = search.astar_graph_search(sp)    
-
-            #move worker in desired direction
-            warehouse = check_elem_action_seq(sol.state, [macro_action[1]])
-            #update list of required elemtary actions
-            elementary_actions.extend(sp.return_solution(sol))
-
-        #update list of required elemtary actions
-        elementary_actions.append(macro_action[1])
-
-        print("\nafter:" + str(macro_action))
-        print(warehouse)
-        print("\nElementary Actions Executed:")
-        print(elementary_actions)
-
-
-    print("\nFinal State:")
-    print(warehouse)
-    print("\nElementary Actions Required:")
-    print(elementary_actions)
+    for node in puzzleSolution.path():
+        step_move.append(node.action)
+    action_seq = step_move[1:]
     
-    return elementary_actions
+    if (puzzle.goal_test(puzzleGoalState)):
+        return step_move_solution
+    elif (puzzleSolution is None or check_elem_action_seq(warehouse,action_seq) == 'Impossible'):
+        return 'Impossible'
+    else:
+        return action_seq
+    
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def can_go_there(warehouse, dst):
