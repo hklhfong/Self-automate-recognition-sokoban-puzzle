@@ -19,22 +19,19 @@ class Way:
         self.name = name
         self.stack = stack
     
-    def __hash__(self):
+    def stack(self):
         """
         The hash method must be implemented for actions to be inserted into sets 
         and dictionaries.
         @return: The hash value of the action.
         """
-        return hash(self.name)
+        return self.stack
     
     def __str__(self):
         """
         @return: The string representation of this object when *str* is called.
         """
         return str(self.name)
-    
-    def __repr__(self):
-        return self.__str__()
     
     def go(self, position):
         """
