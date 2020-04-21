@@ -25,6 +25,9 @@ import search
 import sokoban
 import random, time
 import direction
+
+#External library
+import math
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -215,15 +218,22 @@ class SokobanPuzzle(search.Problem):
     def __init__(self, initial=None, goal=None, allow_taboo_push=False, macro=False):
      
     
-        
+        self.initial = initial.copy()
         if goal is None:
-            self.goal = initial.copy()
-            self.goal.boxes = self.goal.targets
+        
+            self.goal = self.initial.targets
+#            self.goal.boxes = self.goal.targets
         else:
             self.goal = goal #assumen it represent warehouse class
-        self.initial = initial #assumen it also represent warehouse class
-        self.allow_taboo_push = allow_taboo_push
-        self.macro = macro
+#        self.initial = initial #assumen it also represent warehouse class
+        if allow_taboo_push is None:
+            self.allow_taboo_push = True
+        else: 
+            self.allow_taboo_push = allow_taboo_push
+        if macro is None:
+            self.macro = False
+        else:
+            self.macro = macro
 
     def actions(self, state):
         """
@@ -234,8 +244,7 @@ class SokobanPuzzle(search.Problem):
         what type of list of actions is to be returned.
         """
         listOfActions = []
-        
-        if self.macro:
+        if self.allow_taboo_push:
             for direct in (UP, RIGHT, DOWN, LEFT):
                 for (x,y) in state.boxes:
                     if direct == UP:
@@ -289,6 +298,61 @@ class SokobanPuzzle(search.Problem):
 
                 # new_state = state.copy(tuple(new_position),new_box_position)
                 listOfActions.append(direct.__str__())
+        
+#        if self.macro:
+#            for direct in (UP, RIGHT, DOWN, LEFT):
+#                for (x,y) in state.boxes:
+#                    if direct == UP:
+#                        if not (x,y+1) in state.worker:
+#                            continue
+#                        if not direct.go(x,y) in state.walls:
+#                            continue
+#                        if not direct.go(x,y) in state.boxes:
+#                            continue
+#                    if direct == RIGHT:
+#                        if not (x-1,y) in state.worker:
+#                            continue
+#                        if not direct.go(x,y) in state.walls:
+#                            continue
+#                        if not direct.go(x,y) in state.boxes:
+#                            continue
+#                    if direct == DOWN:
+#                        if not (x,y-1) in state.worker:
+#                            continue
+#                        if not direct.go(x,y) in state.walls:
+#                            continue
+#                        if not direct.go(x,y) in state.boxes:
+#                            continue
+#                    if direct == LEFT:
+#                        if not (x+1,y) in state.worker:
+#                            continue
+#                        if not direct.go(x,y) in state.walls:
+#                            continue
+#                        if not direct.go(x,y) in state.boxes:
+#                            continue
+#                    listOfActions.append((x,y),direct.__str__())
+#
+#            return listOfActions
+#            
+#        else:    
+#            for direct in (UP, RIGHT, DOWN, LEFT):
+#                new_position = direct.go(list(state.worker))
+#                
+#                
+#                if new_position in state.walls:
+#                    continue
+#                if new_position in state.boxes:
+#                    new_box_position = direct.go(new_position)
+#                    if new_box_position in state.walls:
+#                        continue
+#                    if new_box_position in state.boxes:
+#                        continue
+#                    if not state.allow_taboo_push:
+#                        if new_box_position in read_taboo_cells(taboo_cells(state)):
+#                            continue
+#
+#                # new_state = state.copy(tuple(new_position),new_box_position)
+#                listOfActions.append(direct.__str__())
 
             return listOfActions
     
@@ -301,11 +365,10 @@ class SokobanPuzzle(search.Problem):
         str_warehouse = check_elem_action_seq(state, action)
             
         if str_warehouse == 'Impossible':
-            return str_warehouse
+#            return str_warehouse
+            return state
+        return state.from_string(str_warehouse)
         
-        new_warehouse = state.copy.from_string(str_warehouse)
-
-        return new_warehouse
 
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
@@ -322,20 +385,20 @@ class SokobanPuzzle(search.Problem):
         return c + 1
 
     def h(self, n):
-     	"""
-     	"""
-     	heur = 0
-     	for box in n.boxes:
+        heur = 0
+        print(n.state.boxes)
+        print(n.state.worker)
+        for box in n.state.boxes:
     		#Find closest target
-            closest_target = n.targets[0]
-            for target in n.targets:
-                 if(mDist(target, box) < mDist(closest_target, box)):
-                     closest_targetet = target
+            closest_target = n.state.targets[0]
+            for target in n.state.targets:
+                if(mDist(target, box) < mDist(closest_target, box)):
+                    closest_targetet = target
     				
     		 #updateHeuristic
             heur = heur + mDist(closest_target, box)              
     
-     	return heur
+        return heur
              
         # k = len(n.state)
         # assert k == len(self.goal)
@@ -434,9 +497,11 @@ def solve_sokoban_elem(warehouse):
     puzzle = SokobanPuzzle(warehouse)
 
     puzzleGoalState = warehouse.copy() 
-    puzzleSolution = search.breadth_first_graph_search(puzzle)
+#    puzzleSolution = search.breadth_first_graph_search(puzzle)
+    puzzleSolution = search.astar_graph_search(puzzle)
     #puzzleSolution = depth_first_graph_search(puzzle)
     #puzzleSolution = astar_graph_search(puzzle, get_Heuristic)
+    
     step_move_solution = []
     step_move = []
     
@@ -454,7 +519,7 @@ def solve_sokoban_elem(warehouse):
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-def can_go_there(warehouse, dst):
+def can_go_there(warehouse,dst):
     '''    
     Determine whether the worker can walk to the cell dst=(row,column) 
     without pushing any box.
@@ -465,28 +530,75 @@ def can_go_there(warehouse, dst):
       True if the worker can walk to cell dst=(row,column) without pushing any box
       False otherwise
     '''
-    frontier = set()
-    explored = set()
-    frontier.add(warehouse.worker)
-
-    while frontier:
-        curr_position = frontier.pop()
-        if curr_position == (dst[1],dst[0]):
-            return True
-        explored.add(curr_position)
-        
-        for direct in (UP, RIGHT, DOWN, LEFT):
-            new_position = direct.go(list(warehouse.worker))
-            
-            if (new_position not in frontier and 
-                new_position not in explored and
-                new_position not in warehouse.walls and 
-                new_position not in warehouse.boxes):
-                frontier.add(new_position)
-    return False
+#    frontier = set()
+#    explored = set()
+#    frontier.add(warehouse.worker)
+#
+#    while frontier:
+#        curr_position = frontier.pop()
+#        if curr_position == (dst[1],dst[0]):
+#            return True
+#        explored.add(curr_position)
+#        
+#        for direct in (UP, RIGHT, DOWN, LEFT):
+#            new_position = direct.go(list(warehouse.worker))
+#            
+#            if (new_position not in frontier and 
+#                new_position not in explored and
+#                new_position not in warehouse.walls and 
+#                new_position not in warehouse.boxes):
+#                frontier.add(new_position)
+#    return False
+    # Need to flip because the coordinate of the test and the warehouse is opposite
+    flipDst = (dst[1],dst[0])
+    path = search.astar_graph_search(Travelling(warehouse.worker,flipDst,warehouse))
+    if path is None:
+        return False
+    else:
+        return True
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Travelling(search.Problem):
+    
+    def __init__(self, initial,goal,warehouse):
+        '''
+        Assign the passed values
 
+        @param
+            initial: the initial value of the worker
+            warehouse: the warehouse object
+            goal: the destination
+        '''
+        self.initial = initial
+        self.goal = goal
+        self.warehouse = warehouse
+      
+    def actions(self,state):
+        listOfActions = []
+        for direct in (UP, RIGHT, DOWN, LEFT):
+            nextStep = direct.go(state)
+            if nextStep not in self.warehouse.walls and nextStep not in self.warehouse.boxes:
+                listOfActions.append(direct.__str__())
+        return listOfActions
+                
+    def result(self,state,step):
+        position = state
+        if step == 'Left':
+            position = LEFT.go(position)
+        elif step == 'Right':
+            position = RIGHT.go(position)
+        elif step == 'Up':
+            position = UP.go(position)
+        elif step == 'Down':
+            position = DOWN.go(position)  
+        state = position
+        return state
+
+    def h(self,n):
+        state = n.state
+        curGoal = self.goal
+        return math.sqrt((state[0]-curGoal[0])**2+(state[1]-curGoal[1])**2)
+        
 def solve_sokoban_macro(warehouse):
     '''    
     Solve using using A* algorithm and macro actions the puzzle defined in 
@@ -513,7 +625,7 @@ def solve_sokoban_macro(warehouse):
     if warehouse.targets == warehouse.boxes:
         return []
     
-    # sokoban_macro = SokobanMacro(warehouse)
+    sokoban_macro = SokobanMacro(warehouse)
     
     results = search.astar_graph_search(warehouse)
     if results == None:
@@ -566,4 +678,4 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
 UP = direction.Way("Up", (0, -1))
 RIGHT = direction.Way("Right", (1, 0))
 DOWN = direction.Way("Down", (0, 1))
-LEFT = direction.Way("left", (-1, 0))
+LEFT = direction.Way("Left", (-1, 0))
