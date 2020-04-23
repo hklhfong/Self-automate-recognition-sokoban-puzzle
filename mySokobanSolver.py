@@ -215,17 +215,12 @@ class SokobanPuzzle(search.Problem):
     #     to satisfy the interface of 'search.Problem'.
 
     
-    def __init__(self, initial=None, goal=None, allow_taboo_push=False, macro=False):
+    def __init__(self, initial=None, allow_taboo_push=None, macro=None):
      
     
-        self.initial = initial
-        if goal is None:
-        
-            self.goal = initial.copy(boxes=initial.targets)
-#            self.goal.boxes = self.goal.targets
-        else:
-            self.goal = goal #assumen it represent warehouse class
-#        self.initial = initial #assumen it also represent warehouse class
+        self.initial = initial.copy()
+        self.goal = initial.copy(boxes=initial.targets)
+
         if allow_taboo_push is None:
             self.allow_taboo_push = True
         else: 
@@ -246,23 +241,33 @@ class SokobanPuzzle(search.Problem):
         listOfActions = []
         if self.allow_taboo_push:
             for direct in (UP, RIGHT, DOWN, LEFT):
-                for box in state.boxes:
-                    newLoc = direct.go(box)
-                    # Worker location, that of box, plus the oposite direction,then
-                    #flipped because can_go_there take (x,y), but coordinate in Warehouse is (y,x)
-                    workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
-                    if can_go_there(self.initial, workerLoc):
-                        if newLoc not in state.walls and newLoc not in state.boxes:
-                            listOfActions.append((box,direct))
+                if self.macro:
+                    for box in state.boxes:
+                        newLoc = direct.go(box)
+                        # Worker location, that of box, plus the oposite direction,then
+                        #flipped because can_go_there take (x,y), but coordinate in Warehouse is (y,x)
+                        workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
+                        if can_go_there(state, workerLoc):
+                            if newLoc not in state.walls and newLoc not in state.boxes:
+                                listOfActions.append((box,direct))
+                else:
+                    nextStep = direct.go(state.worker)
+                    if nextStep not in state.walls:
+                        listOfActions.append(direct)
         else:
             for direct in (UP, RIGHT, DOWN, LEFT):
-                for box in state.boxes:
-                    newLoc = direct.go(box)
-                    workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
-                    if can_go_there(self.initial, workerLoc):
-                        if newLoc not in state.walls and newLoc not in state.boxes:
-                            if newLoc not in read_taboo_cells(taboo_cells(state)):
-                                listOfActions.append((box,direct))
+                if self.macro:
+                    for box in state.boxes:
+                        newLoc = direct.go(box)
+                        workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
+                        if can_go_there(state, workerLoc):
+                            if newLoc not in state.walls and newLoc not in state.boxes:
+                                if newLoc not in read_taboo_cells(taboo_cells(state)):
+                                    listOfActions.append((box,direct))
+                else:
+                    nextStep = direct.go(state.worker)
+                    if nextStep not in state.walls and nextStep not in read_taboo_cells(taboo_cells(state)):
+                            listOfActions.append(direct)
         return listOfActions
     
     def result(self, state, action):
@@ -272,32 +277,33 @@ class SokobanPuzzle(search.Problem):
 #        str_warehouse = check_elem_action_seq(state, action)
         
         #Extract list of action for each box
-        oldPos = action[0]
-        if oldPos in state.boxes:
-            #Remove original box position
-            state.boxes.remove(oldPos)
-            #Move box to new position
-            state.worker = oldPos
-            newPos = action[1].go(oldPos)
-            state.boxes.append(newPos)
+
+        if self.macro:
+            oldPos = action[0]
+            if oldPos in state.boxes:
+                #Remove original box position
+                state.boxes.remove(oldPos)
+                #Move box to new position
+                state.worker = oldPos
+                newPos = action[1].go(oldPos)
+                state.boxes.append(newPos)
+        else:
+            pos_one = pos_two = state.worker
+            pos_one = action.go(pos_one)
+            pos_two = action.go(pos_one)
+            if pos_one in state.boxes:
+                if pos_two not in state.boxes or pos_two not in state.walls:
+                    state.boxes.remove(pos_one)
+                    state.boxes.append(pos_two)
+            state.worker = pos_one
+
         return state
-                
-                
-                
-                     
-            
-#        if str_warehouse == 'Impossible':
-##            return str_warehouse
-#            return state
-#        return state.from_string(str_warehouse)
-        
-
-#    def goal_test(self, state):
-#        """Return True if the state is a goal. The default method compares the
-#        state to self.goal, as specified in the constructor. Override this
-#        method if checking against a single self.goal is not enough."""
-#        return set(self.goal) == set(state.boxes) 
-
+    
+    def goal_test(self, state):
+        """Return True if the state is a goal. The default method compares the
+        state to self.goal, as specified in the constructor. Override this
+        method if checking against a single self.goal is not enough."""
+        return state.boxes == self.goal.boxes
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
         state1 via action, assuming cost c to get up to state1. If the problem
@@ -320,14 +326,6 @@ class SokobanPuzzle(search.Problem):
     
         return heur
              
-        # k = len(n.state)
-        # assert k == len(self.goal)
-        # misplaced = [x for i,x in enumerate(n.state) if x!=k-1-i]
-        # if misplaced:
-        #     # some elements misplaced
-        #     return 1+max(misplaced)
-        # else:
-        #     return 0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def mDist(loca_a, loca_b):
@@ -413,37 +411,24 @@ def solve_sokoban_elem(warehouse):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
-
-    puzzle = SokobanPuzzle(warehouse)
-#    puzzle = Travelling(warehouse.worker, warehouse.targets, warehouse)
-
+    #Enable taboo, no macro
+    puzzle = SokobanPuzzle(warehouse, True, False)
     puzzleGoalState = warehouse.copy() 
-#    puzzleSolution = search.breadth_first_graph_search(puzzle)
+    if (puzzleGoalState.boxes == puzzleGoalState.targets):
+        return []
+    # A_star
     puzzleSolution = search.astar_graph_search(puzzle)
-    #puzzleSolution = depth_first_graph_search(puzzle)
-    #puzzleSolution = astar_graph_search(puzzle, get_Heuristic)
-    
-    step_move_solution = []
-    step_move = []
-    
-    if puzzleSolution is not None:
-        print("True")
-        return True
+    step_move = []   
+    if (puzzleSolution is None):
+        return 'Impossible'
     else:
-        print("False")
-        return False
-    
-#    for node in puzzleSolution.path():
-#        step_move.append(node.action)
-#    action_seq = step_move[1:]
-#    
-#    if (puzzle.goal_test(puzzleGoalState)):
-#        return step_move_solution
-#    elif (puzzleSolution is None or check_elem_action_seq(warehouse,action_seq) == 'Impossible'):
-#        return 'Impossible'
-#    else:
-#        return action_seq
-    
+        for node in puzzleSolution.path():
+            step_move.append(node.action.__str__())
+        action_seq = step_move[1:]
+        if check_elem_action_seq(warehouse,action_seq) == 'Impossible':
+            return 'Impossible'
+        else:
+            return action_seq
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -458,25 +443,7 @@ def can_go_there(warehouse,dst):
       True if the worker can walk to cell dst=(row,column) without pushing any box
       False otherwise
     '''
-#    frontier = set()
-#    explored = set()
-#    frontier.add(warehouse.worker)
-#
-#    while frontier:
-#        curr_position = frontier.pop()
-#        if curr_position == (dst[1],dst[0]):
-#            return True
-#        explored.add(curr_position)
-#        
-#        for direct in (UP, RIGHT, DOWN, LEFT):
-#            new_position = direct.go(list(warehouse.worker))
-#            
-#            if (new_position not in frontier and 
-#                new_position not in explored and
-#                new_position not in warehouse.walls and 
-#                new_position not in warehouse.boxes):
-#                frontier.add(new_position)
-#    return False
+
     # Need to flip because the coordinate of the test and the warehouse is opposite
     flipDst = (dst[1],dst[0])
     path = search.astar_graph_search(Travelling(warehouse.worker,flipDst,warehouse))
@@ -511,21 +478,14 @@ class Travelling(search.Problem):
                 
     def result(self,state,step):
         position = state
-        position = step.go(position)
-#        if step == 'Left':
-#            position = LEFT.go(position)
-#        elif step == 'Right':
-#            position = RIGHT.go(position)
-#        elif step == 'Up':
-#            position = UP.go(position)
-#        elif step == 'Down':
-#            position = DOWN.go(position)  
+        position = step.go(position)  
         return position
 
     def h(self,n):
         state = n.state
         curGoal = self.goal
         return math.sqrt((state[0]-curGoal[0])**2+(state[1]-curGoal[1])**2)
+
         
 def solve_sokoban_macro(warehouse):
     '''    
@@ -549,46 +509,25 @@ def solve_sokoban_macro(warehouse):
         Otherwise return M a sequence of macro actions that solves the puzzle.
         If the puzzle is already in a goal state, simply return []
     '''
-    
-#    if warehouse.targets == warehouse.boxes:
-#        return []
-#    
-#    sokoban_macro = SokobanMacro(warehouse)
-#    
-#    results = search.astar_graph_search(warehouse)
-#    if results == None:
-#        return ['Impossible']
-#    path = results.path()
-#    solution = []
-#    for node in path:
-#        solution.append(node.action)
-#    solution.remove(None)   
-#    #convert (x,y) to (r,c)
-#    macro_rc = []
-#    for action in solution:
-#        macro_rc.append(((action[0][1], action[0][0]), action[1]))
-#    
-#    return macro_rc
 
-#           Testing - Thomas
-    puzzle = SokobanPuzzle(warehouse)
-#    puzzle = Travelling(warehouse.worker, warehouse.targets, warehouse)
-
+  #Enable taboo, no macro
+    puzzle = SokobanPuzzle(warehouse, True, True)
     puzzleGoalState = warehouse.copy() 
-#    puzzleSolution = search.breadth_first_graph_search(puzzle)
+    if (puzzleGoalState.boxes == puzzleGoalState.targets):
+        return []
+    # A_star
     puzzleSolution = search.astar_graph_search(puzzle)
-    #puzzleSolution = depth_first_graph_search(puzzle)
-    #puzzleSolution = astar_graph_search(puzzle, get_Heuristic)
-    
-    step_move_solution = []
-    step_move = []
-    
-    if puzzleSolution is None:
-        print("False")
-        return False
+    step_move = []   
+    if (puzzleSolution is None):
+        return 'Impossible'
     else:
-        print("True")
-        return True
+        for node in puzzleSolution.path():
+            action = node.action
+            if action is None:
+                continue
+            step_move.append(((action[0][1], action[0][0]), action[1].__str__()))
+        action_seq = step_move[:]
+        return action_seq
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def solve_weighted_sokoban_elem(warehouse, push_costs):
