@@ -66,7 +66,9 @@ def taboo_cells(warehouse):
     X,Y = zip(*warehouse.walls) # pythonic version of the above
     x_size, y_size = 1+max(X), 1+max(Y)
     
-    xSymbolList = []
+    newXSymbolList = []
+    oldXSymbolList = []
+    firstLoop = True
     strPuzzle = [[" "] * x_size for y in range(y_size)]
     first_row_wall = 0
     first_col_wall = 0
@@ -109,31 +111,49 @@ def taboo_cells(warehouse):
                         break
                     temp_row = temp_row - 1
                 bottom_walls.append([x,temp_row])
-            
-    for y in range(warehouse.nrows):
-        for x in range(warehouse.ncols):  
-            if not (x,y) in warehouse.walls and not (x,y) in warehouse.targets:
-                if (x-1,y) in warehouse.walls or (x-1,y) in xSymbolList:
-                    if (x,y-1) in warehouse.walls or (x,y-1) in xSymbolList:
-                            xSymbolList.append([x,y])
-                            continue
-                    if (x,y+1) in warehouse.walls or (x,y+1) in xSymbolList:
-                            xSymbolList.append([x,y])  
-                            continue
-                if (x+1,y) in warehouse.walls or (x+1,y) in xSymbolList:
-                    if (x,y-1) in warehouse.walls or (x,y-1) in xSymbolList:  
-                            xSymbolList.append([x,y]) 
-                            continue
-                    if (x,y+1) in warehouse.walls or (x,y+1) in xSymbolList:
-                            xSymbolList.append([x,y])  
-                            continue
-                        
+    
+    while (True):
+        for y in range(warehouse.nrows):
+            for x in range(warehouse.ncols):  
+                if not (x,y) in warehouse.walls or not (x,y) in oldXSymbolList:
+                    if (x-1,y) in warehouse.walls:
+                        if (x,y-1) in warehouse.walls or (x,y-1) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))
+                                continue
+                        if (x,y+1) in warehouse.walls or (x,y+1) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))  
+                                continue
+                    if (x+1,y) in warehouse.walls:
+                        if (x,y-1) in warehouse.walls or (x,y-1) in oldXSymbolList:  
+                                oldXSymbolList.append((x,y)) 
+                                continue
+                        if (x,y+1) in warehouse.walls or (x,y+1) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))  
+                                continue
+                    if (x,y-1) in warehouse.walls:
+                        if (x-1,y) in warehouse.walls or (x-1,y) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))
+                                continue
+                        if (x+1,y) in warehouse.walls or (x+1,y) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))  
+                                continue
+                    if (x,y+1) in warehouse.walls:
+                        if (x-1,y) in warehouse.walls or (x-1,y) in oldXSymbolList:  
+                                oldXSymbolList.append((x,y)) 
+                                continue
+                        if (x+1,y) in warehouse.walls or (x+1,y) in oldXSymbolList:
+                                oldXSymbolList.append((x,y))  
+                                continue
+        newXSymbolList = oldXSymbolList   
+        if (newXSymbolList == oldXSymbolList and not firstLoop):
+            break
+        firstLoop = False
                         
     # for (x,y) in xSymbolList:
     #       strPuzzle[y][x] = "X"
                         
                         
-    for (x,y) in xSymbolList:
+    for (x,y) in newXSymbolList:
         for (left_col,left_row) in left_walls:
             if x > left_col and left_row == y:
                 for(right_col,right_row) in right_walls:
@@ -141,7 +161,7 @@ def taboo_cells(warehouse):
                         for (top_col,top_row) in top_walls:
                             if y > top_row and top_col == x:
                                 for (bottom_col,bottom_row) in bottom_walls:
-                                    if y < bottom_row and bottom_col == x:
+                                    if y < bottom_row and bottom_col == x and (x,y) not in warehouse.targets:
                                         strPuzzle[y][x] = "X"
                     
     return "\n".join(["".join(line) for line in strPuzzle])
@@ -215,7 +235,7 @@ class SokobanPuzzle(search.Problem):
     #     to satisfy the interface of 'search.Problem'.
 
     
-    def __init__(self, initial=None, allow_taboo_push=None, macro=None):
+    def __init__(self, initial=None, allow_taboo_push=None, macro=None,push_costs = None):
      
     
         self.initial = initial.copy()
@@ -229,6 +249,7 @@ class SokobanPuzzle(search.Problem):
             self.macro = False
         else:
             self.macro = macro
+        self.push_cost = push_costs
 
     def actions(self, state):
         """
@@ -309,8 +330,14 @@ class SokobanPuzzle(search.Problem):
         state1 via action, assuming cost c to get up to state1. If the problem
         is such that the path doesn't matter, this function will only look at
         state2.  If the path does matter, it will consider c and maybe state1
-        and action. The default method costs 1 for every step in the path."""
-        return c + 1
+        and action. The default method costs 1 for every step in the path."""        
+        if self.path_cost == None:
+            return c + 1
+        else:
+            if state1.boxes != state2.boxes:
+                return c + self.path_cost
+            else:
+                return c + 1
 
     def h(self, n):
         heur = 0
@@ -556,7 +583,23 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
-    
+    puzzle = SokobanPuzzle(warehouse, True, False,push_costs)
+    puzzleGoalState = warehouse.copy() 
+    if (puzzleGoalState.boxes == puzzleGoalState.targets):
+        return []
+    # A_star
+    puzzleSolution = search.astar_graph_search(puzzle)
+    step_move = []   
+    if (puzzleSolution is None):
+        return 'Impossible'
+    else:
+        for node in puzzleSolution.path():
+            step_move.append(node.action.__str__())
+        action_seq = step_move[1:]
+        if check_elem_action_seq(warehouse,action_seq) == 'Impossible':
+            return 'Impossible'
+        else:
+            return action_seq
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
