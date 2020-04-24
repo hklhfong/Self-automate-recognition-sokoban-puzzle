@@ -71,7 +71,6 @@ def taboo_cells(warehouse):
     tempXSymbolList = []
     coner = []
     targetsList = []
-    firstLoop = True
     strPuzzle = [[" "] * x_size for y in range(y_size)]
     first_row_wall = 0
     first_col_wall = 0
@@ -83,7 +82,8 @@ def taboo_cells(warehouse):
     
     for (x,y) in warehouse.walls:
             strPuzzle[y][x] = "#"
-            
+
+#find the outside and inside           
     for y in range(warehouse.nrows):
         first_col_wall = True
         for x in range(warehouse.ncols):
@@ -115,7 +115,7 @@ def taboo_cells(warehouse):
                     temp_row = temp_row - 1
                 bottom_walls.append([x,temp_row])
     
-
+#rule number 1
     for y in range(warehouse.nrows):
         for x in range(warehouse.ncols):  
             if not (x,y) in warehouse.walls:
@@ -191,7 +191,7 @@ def taboo_cells(warehouse):
             n = n+1
         n = 1          
         while (x,y+n) not in warehouse.walls:
-            print ('x,y+n = '+ str((x,y+n)))
+            # print ('x,y+n = '+ str((x,y+n)))
             if (x+1,y+n) not in warehouse.walls and (x-1,y+n) not in warehouse.walls:
                 n = 0
                 tempXSymbolList = []
@@ -284,10 +284,9 @@ class SokobanPuzzle(search.Problem):
 
     
     def __init__(self, initial=None, allow_taboo_push=None, macro=None,push_costs = None):
-     
-    
-        self.initial = initial.__str__
-        self.goal = initial.copy(boxes=initial.targets).__str__
+         
+        self.initial = initial.__str__()
+        self.goal = initial.copy(boxes=initial.targets).__str__()
 
         if allow_taboo_push is None:
             self.allow_taboo_push = True
@@ -378,6 +377,8 @@ class SokobanPuzzle(search.Problem):
         method if checking against a single self.goal is not enough."""
         new_warehouse = sokoban.Warehouse()
         new_warehouse.extract_locations(state[1].split(sep="\n"))
+        print ('this is new_warehouse.box' + str(new_warehouse.boxes))
+        print ('this is goal.boxes' + self.goal.boxes)
         return new_warehouse.boxes == self.goal.boxes
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
