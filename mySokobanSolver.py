@@ -296,7 +296,7 @@ class SokobanPuzzle(search.Problem):
             self.macro = False
         else:
             self.macro = macro
-        self.push_cost = push_costs
+        self.push_costs = push_costs
 
     def actions(self, state):
         """
@@ -307,7 +307,7 @@ class SokobanPuzzle(search.Problem):
         what type of list of actions is to be returned.
         """
         warehouse = sokoban.Warehouse()
-        warehouse.extract_locations(state[1].split(sep="\n"))
+        warehouse.extract_locations(state.split(sep="\n"))
         
         listOfActions = []
         if self.allow_taboo_push:
@@ -349,7 +349,7 @@ class SokobanPuzzle(search.Problem):
         
         #Extract list of action for each box
         new_warehouse = sokoban.Warehouse()
-        new_warehouse.extract_locations(state[1].split(sep="\n"))
+        new_warehouse.extract_locations(state.split(sep="\n"))
         if self.macro:
             oldPos = action[0]
             if oldPos in new_warehouse.boxes:
@@ -375,31 +375,35 @@ class SokobanPuzzle(search.Problem):
         """Return True if the state is a goal. The default method compares the
         state to self.goal, as specified in the constructor. Override this
         method if checking against a single self.goal is not enough."""
-        new_warehouse = sokoban.Warehouse()
-        new_warehouse.extract_locations(state[1].split(sep="\n"))
-        print ('this is new_warehouse.box' + str(new_warehouse.boxes))
-        print ('this is goal.boxes' + self.goal.boxes)
-        return new_warehouse.boxes == self.goal.boxes
+        return state[1].replace("@", " ") == self.goal
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
         state1 via action, assuming cost c to get up to state1. If the problem
         is such that the path doesn't matter, this function will only look at
         state2.  If the path does matter, it will consider c and maybe state1
-        and action. The default method costs 1 for every step in the path."""        
-        if self.path_cost == None:
+        and action. The default method costs 1 for every step in the path."""   
+        new_warehouse1 = sokoban.Warehouse()
+        new_warehouse1.extract_locations(state1.split(sep="\n"))
+        new_warehouse2 = sokoban.Warehouse()
+        new_warehouse2.extract_locations(state2.split(sep="\n"))
+        if self.push_costs == None:
             return c + 1
         else:
-            if state1.boxes != state2.boxes:
-                return c + self.path_cost
+            if new_warehouse1.boxes != new_warehouse2.boxes:
+                return c + self.push_costs
             else:
                 return c + 1
 
     def h(self, n):
         heur = 0
-        for box in n.state.boxes:
+        print ('n.state')
+        print (n.state[1])
+        new_warehouse = sokoban.Warehouse()
+        new_warehouse.extract_locations(n.state.split(sep="\n"))
+        for box in new_warehouse.boxes:
     		#Find closest target
-            closest_target = n.state.targets[0]
-            for target in n.state.targets:
+            closest_target = new_warehouse.targets[0]
+            for target in new_warehouse.targets:
                 if(mDist(target, box) < mDist(closest_target, box)):
                     closest_target = target
     				
