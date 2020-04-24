@@ -66,8 +66,11 @@ def taboo_cells(warehouse):
     X,Y = zip(*warehouse.walls) # pythonic version of the above
     x_size, y_size = 1+max(X), 1+max(Y)
     
-    newXSymbolList = []
-    oldXSymbolList = []
+    xSymbolList = []
+    conerList = []
+    tempXSymbolList = []
+    coner = []
+    targetsList = []
     firstLoop = True
     strPuzzle = [[" "] * x_size for y in range(y_size)]
     first_row_wall = 0
@@ -112,48 +115,48 @@ def taboo_cells(warehouse):
                     temp_row = temp_row - 1
                 bottom_walls.append([x,temp_row])
     
-    while (True):
-        for y in range(warehouse.nrows):
-            for x in range(warehouse.ncols):  
-                if not (x,y) in warehouse.walls or not (x,y) in oldXSymbolList:
-                    if (x-1,y) in warehouse.walls:
-                        if (x,y-1) in warehouse.walls or (x,y-1) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))
-                                continue
-                        if (x,y+1) in warehouse.walls or (x,y+1) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))  
-                                continue
-                    if (x+1,y) in warehouse.walls:
-                        if (x,y-1) in warehouse.walls or (x,y-1) in oldXSymbolList:  
-                                oldXSymbolList.append((x,y)) 
-                                continue
-                        if (x,y+1) in warehouse.walls or (x,y+1) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))  
-                                continue
+
+    for y in range(warehouse.nrows):
+        for x in range(warehouse.ncols):  
+            if not (x,y) in warehouse.walls:
+                if (x,y) in warehouse.targets:
+                    targetsList.append((x,y))
+                    continue
+                if (x-1,y) in warehouse.walls:
                     if (x,y-1) in warehouse.walls:
-                        if (x-1,y) in warehouse.walls or (x-1,y) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))
-                                continue
-                        if (x+1,y) in warehouse.walls or (x+1,y) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))  
-                                continue
+                        coner.append((x,y))
+                        continue
                     if (x,y+1) in warehouse.walls:
-                        if (x-1,y) in warehouse.walls or (x-1,y) in oldXSymbolList:  
-                                oldXSymbolList.append((x,y)) 
-                                continue
-                        if (x+1,y) in warehouse.walls or (x+1,y) in oldXSymbolList:
-                                oldXSymbolList.append((x,y))  
-                                continue
-        newXSymbolList = oldXSymbolList   
-        if (newXSymbolList == oldXSymbolList and not firstLoop):
-            break
-        firstLoop = False
-                        
-    # for (x,y) in xSymbolList:
-    #       strPuzzle[y][x] = "X"
-                        
-                        
-    for (x,y) in newXSymbolList:
+                        coner.append((x,y))  
+                        continue
+                    
+                if (x+1,y) in warehouse.walls:
+                    if (x,y-1) in warehouse.walls:  
+                        coner.append((x,y)) 
+                        continue
+                    if (x,y+1) in warehouse.walls:
+                        coner.append((x,y))  
+                        continue
+                
+                if (x,y-1) in warehouse.walls:
+                    if (x-1,y) in warehouse.walls:
+                        coner.append((x,y))
+                        continue
+                    if (x+1,y) in warehouse.walls:
+                        coner.append((x,y))  
+                        continue
+                    
+                if (x,y+1) in warehouse.walls:
+                    if (x-1,y) in warehouse.walls:  
+                        coner.append((x,y)) 
+                        continue
+                    if (x+1,y) in warehouse.walls:
+                        coner.append((x,y))  
+                        continue
+                    
+                    
+#determent outside or inside the wall       
+    for (x,y) in coner:
         for (left_col,left_row) in left_walls:
             if x > left_col and left_row == y:
                 for(right_col,right_row) in right_walls:
@@ -161,8 +164,53 @@ def taboo_cells(warehouse):
                         for (top_col,top_row) in top_walls:
                             if y > top_row and top_col == x:
                                 for (bottom_col,bottom_row) in bottom_walls:
-                                    if y < bottom_row and bottom_col == x and (x,y) not in warehouse.targets:
-                                        strPuzzle[y][x] = "X"
+                                    if y < bottom_row and bottom_col == x:
+                                        conerList.append((x,y))
+#rule number 2                                      
+    xSymbolList = conerList
+    for (x,y) in conerList:
+        n = 1
+        while (x+n,y) not in warehouse.walls:
+            
+            if (x+n,y+1) not in warehouse.walls and (x+n,y-1) not in warehouse.walls:
+                n = 0
+                tempXSymbolList = []
+            if (x+n,y) in warehouse.targets and (x+n,y) not in conerList:
+                n = 0
+                tempXSymbolList = []
+                
+            if (x+n,y) in xSymbolList:
+                for temp in tempXSymbolList:
+                    
+                    xSymbolList.append(temp)
+                n = 0
+                
+            if n == 0:
+                break
+            tempXSymbolList.append((x+n,y))
+            n = n+1
+        n = 1          
+        while (x,y+n) not in warehouse.walls:
+            print ('x,y+n = '+ str((x,y+n)))
+            if (x+1,y+n) not in warehouse.walls and (x-1,y+n) not in warehouse.walls:
+                n = 0
+                tempXSymbolList = []
+            if (x,y+n) in warehouse.targets and (x,y+n) not in conerList:
+                n = 0
+                tempXSymbolList = []
+            if (x,y+n) in xSymbolList:
+                for temp in tempXSymbolList:
+                    xSymbolList.append(temp)
+                n = 0
+                
+            if n == 0:
+                break
+            tempXSymbolList.append((x,y+n))
+            n = n+1
+                        
+#draw the X                      
+    for (x,y) in xSymbolList:
+        strPuzzle[y][x] = "X"
                     
     return "\n".join(["".join(line) for line in strPuzzle])
 
@@ -238,8 +286,8 @@ class SokobanPuzzle(search.Problem):
     def __init__(self, initial=None, allow_taboo_push=None, macro=None,push_costs = None):
      
     
-        self.initial = initial.copy()
-        self.goal = initial.copy(boxes=initial.targets)
+        self.initial = initial.__str__
+        self.goal = initial.copy(boxes=initial.targets).__str__
 
         if allow_taboo_push is None:
             self.allow_taboo_push = True
@@ -259,35 +307,38 @@ class SokobanPuzzle(search.Problem):
         'self.allow_taboo_push' and 'self.macro' should be tested to determine
         what type of list of actions is to be returned.
         """
+        warehouse = sokoban.Warehouse()
+        warehouse.extract_locations(state[1].split(sep="\n"))
+        
         listOfActions = []
         if self.allow_taboo_push:
             for direct in (UP, RIGHT, DOWN, LEFT):
                 if self.macro:
-                    for box in state.boxes:
+                    for box in warehouse.boxes:
                         newLoc = direct.go(box)
                         # Worker location, that of box, plus the oposite direction,then
                         #flipped because can_go_there take (x,y), but coordinate in Warehouse is (y,x)
                         workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
-                        if can_go_there(state, workerLoc):
-                            if newLoc not in state.walls and newLoc not in state.boxes:
+                        if can_go_there(warehouse, workerLoc):
+                            if newLoc not in warehouse.walls and newLoc not in warehouse.boxes:
                                 listOfActions.append((box,direct))
                 else:
-                    nextStep = direct.go(state.worker)
-                    if nextStep not in state.walls:
+                    nextStep = direct.go(warehouse.worker)
+                    if nextStep not in warehouse.walls:
                         listOfActions.append(direct)
         else:
             for direct in (UP, RIGHT, DOWN, LEFT):
                 if self.macro:
-                    for box in state.boxes:
+                    for box in warehouse.boxes:
                         newLoc = direct.go(box)
                         workerLoc = (box[1] + -1* direct.stack[1],box[0] + -1* direct.stack[0])
-                        if can_go_there(state, workerLoc):
-                            if newLoc not in state.walls and newLoc not in state.boxes:
-                                if newLoc not in read_taboo_cells(taboo_cells(state)):
+                        if can_go_there(warehouse, workerLoc):
+                            if newLoc not in warehouse.walls and newLoc not in warehouse.boxes:
+                                if newLoc not in read_taboo_cells(taboo_cells(warehouse)):
                                     listOfActions.append((box,direct))
                 else:
-                    nextStep = direct.go(state.worker)
-                    if nextStep not in state.walls and nextStep not in read_taboo_cells(taboo_cells(state)):
+                    nextStep = direct.go(warehouse.worker)
+                    if nextStep not in warehouse.walls and nextStep not in read_taboo_cells(taboo_cells(warehouse)):
                             listOfActions.append(direct)
         return listOfActions
     
@@ -298,33 +349,36 @@ class SokobanPuzzle(search.Problem):
 #        str_warehouse = check_elem_action_seq(state, action)
         
         #Extract list of action for each box
-
+        new_warehouse = sokoban.Warehouse()
+        new_warehouse.extract_locations(state[1].split(sep="\n"))
         if self.macro:
             oldPos = action[0]
-            if oldPos in state.boxes:
+            if oldPos in new_warehouse.boxes:
                 #Remove original box position
-                state.boxes.remove(oldPos)
+                new_warehouse.boxes.remove(oldPos)
                 #Move box to new position
-                state.worker = oldPos
+                new_warehouse.worker = oldPos
                 newPos = action[1].go(oldPos)
-                state.boxes.append(newPos)
+                new_warehouse.boxes.append(newPos)
         else:
-            pos_one = pos_two = state.worker
+            pos_one = pos_two = new_warehouse.worker
             pos_one = action.go(pos_one)
             pos_two = action.go(pos_one)
-            if pos_one in state.boxes:
-                if pos_two not in state.boxes or pos_two not in state.walls:
-                    state.boxes.remove(pos_one)
-                    state.boxes.append(pos_two)
-            state.worker = pos_one
+            if pos_one in new_warehouse.boxes:
+                if pos_two not in new_warehouse.boxes or pos_two not in new_warehouse.walls:
+                    new_warehouse.boxes.remove(pos_one)
+                    new_warehouse.boxes.append(pos_two)
+            new_warehouse.worker = pos_one
 
-        return state
+        return new_warehouse.__str__()
     
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
         state to self.goal, as specified in the constructor. Override this
         method if checking against a single self.goal is not enough."""
-        return state.boxes == self.goal.boxes
+        new_warehouse = sokoban.Warehouse()
+        new_warehouse.extract_locations(state[1].split(sep="\n"))
+        return new_warehouse.boxes == self.goal.boxes
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
         state1 via action, assuming cost c to get up to state1. If the problem
