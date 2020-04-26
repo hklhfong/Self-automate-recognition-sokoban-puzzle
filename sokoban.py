@@ -151,8 +151,8 @@ class Warehouse:
         workers =  list(find_2D_iterator(lines, "@"))  # workers on a free cell
         workers_on_a_target = list(find_2D_iterator(lines, "!"))
         # Check that we have exactly one agent
-        print('this is worker' + str(workers))
-        print('this is worker on target' + str(workers_on_a_target))
+        # print('extract_locations: this is worker' + str(workers))
+        # print('extract_locations: this is worker on target' + str(workers_on_a_target))
         assert len(workers)+len(workers_on_a_target) == 1 
         if len(workers) == 1:
             self.worker = workers[0]

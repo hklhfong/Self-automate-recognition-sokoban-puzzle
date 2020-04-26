@@ -287,7 +287,7 @@ class SokobanPuzzle(search.Problem):
          
         self.initial = initial.__str__()
         self.goal = initial.copy(boxes=initial.targets).__str__()
-
+        self.boxLocationInitial = list(initial.boxes)
         if allow_taboo_push is None:
             self.allow_taboo_push = True
         else: 
@@ -297,7 +297,15 @@ class SokobanPuzzle(search.Problem):
         else:
             self.macro = macro
         self.push_costs = push_costs
-
+        
+        
+        if self.path_cost != None:
+            self.pushCostofEachBox = []
+            for i in range(len(self.boxLocationInitial)):
+                self.pushCostofEachBox.append(self.boxLocationInitial[i] + self.push_costs[i]) 
+                
+        
+        
     def actions(self, state):
         """
         Return the list of actions that can be executed in the given state.
@@ -339,6 +347,7 @@ class SokobanPuzzle(search.Problem):
                     nextStep = direct.go(warehouse.worker)
                     if nextStep not in warehouse.walls and nextStep not in read_taboo_cells(taboo_cells(warehouse)):
                             listOfActions.append(direct)
+        print ('Action: List of Action' + str(listOfActions))
         return listOfActions
     
     def result(self, state, action):
@@ -368,14 +377,25 @@ class SokobanPuzzle(search.Problem):
                     new_warehouse.boxes.remove(pos_one)
                     new_warehouse.boxes.append(pos_two)
             new_warehouse.worker = pos_one
-
+        print ('Result function:new_warehouse\n' + new_warehouse.__str__())
         return new_warehouse.__str__()
     
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
         state to self.goal, as specified in the constructor. Override this
         method if checking against a single self.goal is not enough."""
-        return state[1].replace("@", " ") == self.goal
+        new_warehouse1 = sokoban.Warehouse()
+        new_warehouse1.extract_locations(state.split(sep="\n"))
+        new_warehouse2 = sokoban.Warehouse()
+        new_warehouse2.extract_locations(self.goal.split(sep="\n"))
+        
+        
+        
+        
+        print('goal_test :\n' + state + 'end\n')
+        print('self.goal :\n' + self.goal + 'end\n')
+        print("goal_test = " + str(new_warehouse1.boxes == new_warehouse2.targets))
+        return new_warehouse1.boxes == new_warehouse2.targets
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
         state1 via action, assuming cost c to get up to state1. If the problem
@@ -384,20 +404,25 @@ class SokobanPuzzle(search.Problem):
         and action. The default method costs 1 for every step in the path."""   
         new_warehouse1 = sokoban.Warehouse()
         new_warehouse1.extract_locations(state1.split(sep="\n"))
+        print('this is boxes---->' + str(new_warehouse1.boxes))
         new_warehouse2 = sokoban.Warehouse()
         new_warehouse2.extract_locations(state2.split(sep="\n"))
+        print('this is boxes++++>' + str(new_warehouse2.boxes))
         if self.push_costs == None:
             return c + 1
         else:
-            if new_warehouse1.boxes != new_warehouse2.boxes:
+            if new_warehouse1.boxes.sort()  != new_warehouse2.boxes.sort() :
+                print('this is push costs---->' + str(self.push_costs))
+                for (x,y) in new_warehouse1.boxes:
+                    if not (x,y) in new_warehouse2.boxes:
+                        for 
                 return c + self.push_costs
             else:
                 return c + 1
 
     def h(self, n):
         heur = 0
-        print ('n.state')
-        print (n.state[1])
+        print ('n.state : \n'+ n.state+'\n')
         new_warehouse = sokoban.Warehouse()
         new_warehouse.extract_locations(n.state.split(sep="\n"))
         for box in new_warehouse.boxes:
