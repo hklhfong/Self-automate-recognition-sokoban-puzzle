@@ -286,8 +286,8 @@ class SokobanPuzzle(search.Problem):
     def __init__(self, initial=None, allow_taboo_push=None, macro=None,push_costs = None):
          
         self.initial = initial.__str__()
+        print('This is the initial state:\n' + self.initial)
         self.goal = initial.copy(boxes=initial.targets).__str__()
-        self.boxLocationInitial = list(initial.boxes)
         if allow_taboo_push is None:
             self.allow_taboo_push = True
         else: 
@@ -298,12 +298,11 @@ class SokobanPuzzle(search.Problem):
             self.macro = macro
         self.push_costs = push_costs
         
-        
-        if self.path_cost != None:
-            self.pushCostofEachBox = []
-            for i in range(len(self.boxLocationInitial)):
-                self.pushCostofEachBox.append(self.boxLocationInitial[i] + self.push_costs[i]) 
+        # self.boxLocationInitial = initial.boxes
+        # if self.path_cost != None:
+        #     self.pushCostofEachBox = enumerate(zip(self.boxLocationInitial, self.path_cost))
                 
+        self.ListofLocation = initial.boxes
         
         
     def actions(self, state):
@@ -330,8 +329,20 @@ class SokobanPuzzle(search.Problem):
                             if newLoc not in warehouse.walls and newLoc not in warehouse.boxes:
                                 listOfActions.append((box,direct))
                 else:
-                    nextStep = direct.go(warehouse.worker)
-                    if nextStep not in warehouse.walls:
+                    pos_one = pos_two = warehouse.worker
+                    pos_one = direct.go(pos_one)
+                    pos_two = direct.go(pos_one)
+                    print(pos_one)
+                    print(pos_two)
+                    if pos_one in warehouse.boxes:
+                        if pos_two not in warehouse.boxes and pos_two not in warehouse.walls:
+                            print('warehouse.boxes')
+                            print(warehouse.boxes)
+                            print('warehouse.walls')
+                            print(warehouse.walls)
+                            listOfActions.append(direct)
+                            continue
+                    if pos_one not in warehouse.boxes and pos_one not in warehouse.walls:
                         listOfActions.append(direct)
         else:
             for direct in (UP, RIGHT, DOWN, LEFT):
@@ -344,9 +355,14 @@ class SokobanPuzzle(search.Problem):
                                 if newLoc not in read_taboo_cells(taboo_cells(warehouse)):
                                     listOfActions.append((box,direct))
                 else:
-                    nextStep = direct.go(warehouse.worker)
-                    if nextStep not in warehouse.walls and nextStep not in read_taboo_cells(taboo_cells(warehouse)):
+                    pos_one = pos_two = warehouse.worker
+                    pos_one = direct.go(pos_one)
+                    pos_two = direct.go(pos_one)
+                    if pos_one in warehouse.boxes:
+                        if pos_two not in warehouse.boxes and pos_two not in warehouse.walls and pos_two not in read_taboo_cells(taboo_cells(warehouse)):
                             listOfActions.append(direct)
+                    if pos_one not in warehouse.boxes and pos_one not in warehouse.walls:
+                        listOfActions.append(direct)
         print ('Action: List of Action' + str(listOfActions))
         return listOfActions
     
@@ -373,11 +389,12 @@ class SokobanPuzzle(search.Problem):
             pos_one = action.go(pos_one)
             pos_two = action.go(pos_one)
             if pos_one in new_warehouse.boxes:
-                if pos_two not in new_warehouse.boxes or pos_two not in new_warehouse.walls:
+                if pos_two not in new_warehouse.boxes and pos_two not in new_warehouse.walls:
                     new_warehouse.boxes.remove(pos_one)
                     new_warehouse.boxes.append(pos_two)
             new_warehouse.worker = pos_one
-        print ('Result function:new_warehouse\n' + new_warehouse.__str__())
+        print ('Result :new_warehouse\n' + new_warehouse.__str__())
+        print ('Worker now in :' + str(new_warehouse.worker))
         return new_warehouse.__str__()
     
     def goal_test(self, state):
@@ -390,12 +407,12 @@ class SokobanPuzzle(search.Problem):
         new_warehouse2.extract_locations(self.goal.split(sep="\n"))
         
         
+        print('goal_test state:\n' + str(set(new_warehouse1.boxes)) + 'end\n')
+        print('goal_test self.goal :\n' + str(set(new_warehouse2.targets)) + 'end\n')
+        print("goal_test = " + str(set(new_warehouse1.boxes) == set(new_warehouse2.targets)))
         
-        
-        print('goal_test :\n' + state + 'end\n')
-        print('self.goal :\n' + self.goal + 'end\n')
-        print("goal_test = " + str(new_warehouse1.boxes == new_warehouse2.targets))
-        return new_warehouse1.boxes == new_warehouse2.targets
+        return set(new_warehouse1.boxes) == set(new_warehouse2.targets)
+    
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
         state1 via action, assuming cost c to get up to state1. If the problem
@@ -404,25 +421,37 @@ class SokobanPuzzle(search.Problem):
         and action. The default method costs 1 for every step in the path."""   
         new_warehouse1 = sokoban.Warehouse()
         new_warehouse1.extract_locations(state1.split(sep="\n"))
-        print('this is boxes---->' + str(new_warehouse1.boxes))
+        print('path_cost:this is boxes before action---->' + str(new_warehouse1.boxes))
         new_warehouse2 = sokoban.Warehouse()
         new_warehouse2.extract_locations(state2.split(sep="\n"))
-        print('this is boxes++++>' + str(new_warehouse2.boxes))
+        print('path_cost:this is boxes after action++++>' + str(new_warehouse2.boxes))
         if self.push_costs == None:
             return c + 1
         else:
-            if new_warehouse1.boxes.sort()  != new_warehouse2.boxes.sort() :
-                print('this is push costs---->' + str(self.push_costs))
-                for (x,y) in new_warehouse1.boxes:
-                    if not (x,y) in new_warehouse2.boxes:
-                        for 
-                return c + self.push_costs
+            # if new_warehouse1.boxes.sort()  != new_warehouse2.boxes.sort() :
+            #     print('this is push costs---->' + str(self.push_costs))
+            #     # for index, (location, cost) in self.pushCostofEachBox:
+            #     #    if not location in new_warehouse2.boxes:
+            #     #        print(index, location)
+            #     for newlocation in new_warehouse2.box():
+            #         if not newlocation in [location for index, (location, cost) in self.pushCostofEachBox ]:
+            #             newlocationNeed = newlocation
+            #     for newlocation in new_warehouse2.box():
+            #         if newlocation in [location for index, (location, cost) in self.pushCostofEachBox ]:
+            #             newlocationDontNeed.append(newlocation)
+            for i in range(len(self.ListofLocation)):
+                if self.ListofLocation[i] not in new_warehouse2.boxes:
+                    cost = self.push_costs[i]
+                    for (x,y) in new_warehouse2.boxes:
+                        if (x,y) not in self.ListofLocation:
+                            self.ListofLocation[i] = (x,y)
+                            return c + cost
             else:
                 return c + 1
 
     def h(self, n):
         heur = 0
-        print ('n.state : \n'+ n.state+'\n')
+        print ('h function:n.state : \n'+ n.state+'\n')
         new_warehouse = sokoban.Warehouse()
         new_warehouse.extract_locations(n.state.split(sep="\n"))
         for box in new_warehouse.boxes:
@@ -667,6 +696,7 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
+    
     puzzle = SokobanPuzzle(warehouse, True, False,push_costs)
     puzzleGoalState = warehouse.copy() 
     if (puzzleGoalState.boxes == puzzleGoalState.targets):
@@ -684,6 +714,24 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
             return 'Impossible'
         else:
             return action_seq
+        
+    # puzzle = SokobanPuzzle(warehouse, True, True)
+    # puzzleGoalState = warehouse.copy() 
+    # if (puzzleGoalState.boxes == puzzleGoalState.targets):
+    #     return []
+    # # A_star
+    # puzzleSolution = search.astar_graph_search(puzzle)
+    # step_move = []   
+    # if (puzzleSolution is None):
+    #     return 'Impossible'
+    # else:
+    #     for node in puzzleSolution.path():
+    #         action = node.action
+    #         if action is None:
+    #             continue
+    #         step_move.append(((action[0][1], action[0][0]), action[1].__str__()))
+    #     action_seq = step_move[:]
+    #     return action_seq
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
