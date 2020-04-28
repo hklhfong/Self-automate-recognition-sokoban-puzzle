@@ -61,7 +61,7 @@ def taboo_cells(warehouse):
        The returned string should NOT have marks for the worker, the targets,
        and the boxes.  
     '''
-    X, Y = zip(*warehouse.walls)  # pythonic version of the above
+    X, Y = zip(*warehouse.walls)
     x_size, y_size = 1+max(X), 1+max(Y)
     coner_List = []
     coner = []
@@ -69,10 +69,7 @@ def taboo_cells(warehouse):
     str_puzzle = [[" "] * x_size for y in range(y_size)]
     first_row_wall = 0
     first_col_wall = 0
-    left_walls = []
-    right_walls = []
-    top_walls = []
-    bottom_walls = []
+    left_walls = right_walls = top_walls =  bottom_walls = []
 
     for (x, y) in warehouse.walls:
         str_puzzle[y][x] = "#"
@@ -301,36 +298,36 @@ class SokobanPuzzle(search.Problem):
         'self.allow_taboo_push' and 'self.macro' should be tested to determine
         what type of list of actions is to be returned.
         """
-        new_warehouse = sokoban.Warehouse()
-        new_warehouse.extract_locations(state.split(sep="\n"))
+        new_wh = sokoban.Warehouse()
+        new_wh.extract_locations(state.split(sep="\n"))
         list_of_actions = []
         for direction in (UP, RIGHT, DOWN, LEFT):
             if self.macro:
-                for box in new_warehouse.boxes:
+                for box in new_wh.boxes:
                     newLoc = direction.go(box)
                     workerLoc = (box[1] + -1 * direction.stack[1], box[0] +
                                  -1 * direction.stack[0])
-                    if can_go_there(new_warehouse, workerLoc):
-                        if newLoc not in new_warehouse.walls and newLoc not in new_warehouse.boxes:
+                    if can_go_there(new_wh, workerLoc):
+                        if newLoc not in new_wh.walls and newLoc not in new_wh.boxes:
                             if self.allow_taboo_push:
                                 list_of_actions.append((box, direction))
                             else:
                                 if newLoc not in read_taboo_cells(taboo_cells
-                                                                  (new_warehouse)):
+                                                                  (new_wh)):
                                     list_of_actions.append((box, direction))
             else:
-                location_one = location_two = new_warehouse.worker
+                location_one = location_two = new_wh.worker
                 location_one = direction.go(location_one)
                 location_two = direction.go(location_one)
-                if location_one in new_warehouse.boxes:
-                    if location_two not in new_warehouse.boxes and location_two not in new_warehouse.walls:
+                if location_one in new_wh.boxes:
+                    if location_two not in new_wh.boxes and location_two not in new_wh.walls:
                         if self.allow_taboo_push:
                             list_of_actions.append(direction)
                         else:
                             if location_two not in read_taboo_cells(taboo_cells
-                                                                    (new_warehouse)):
+                                                                    (new_wh)):
                                 list_of_actions.append(direction)
-                if location_one not in new_warehouse.boxes and location_one not in new_warehouse.walls:
+                if location_one not in new_wh.boxes and location_one not in new_wh.walls:
                     list_of_actions.append(direction)
         return list_of_actions
 
@@ -338,38 +335,38 @@ class SokobanPuzzle(search.Problem):
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
-        new_warehouse = sokoban.Warehouse()
-        new_warehouse.extract_locations(state.split(sep="\n"))
+        new_wh = sokoban.Warehouse()
+        new_wh.extract_locations(state.split(sep="\n"))
         if self.macro:
             original_location = action[0]
-            if original_location in new_warehouse.boxes:
+            if original_location in new_wh.boxes:
                 # remove original box position
-                new_warehouse.boxes.remove(original_location)
+                new_wh.boxes.remove(original_location)
                 # move box to new position
-                new_warehouse.worker = original_location
+                new_wh.worker = original_location
                 new_location = action[1].go(original_location)
-                new_warehouse.boxes.append(new_location)
+                new_wh.boxes.append(new_location)
         else:
-            location_one = location_two = new_warehouse.worker
+            location_one = location_two = new_wh.worker
             location_one = action.go(location_one)
             location_two = action.go(location_one)
             # check locations is valid or not
-            if location_one in new_warehouse.boxes:
-                if location_two not in new_warehouse.boxes and location_two not in new_warehouse.walls:
-                    new_warehouse.boxes.remove(location_one)
-                    new_warehouse.boxes.append(location_two)
-            new_warehouse.worker = location_one
-        return new_warehouse.__str__()
+            if location_one in new_wh.boxes:
+                if location_two not in new_wh.boxes and location_two not in new_wh.walls:
+                    new_wh.boxes.remove(location_one)
+                    new_wh.boxes.append(location_two)
+            new_wh.worker = location_one
+        return new_wh.__str__()
 
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
         state to self.goal, as specified in the constructor. Override this
         method if checking against a single self.goal is not enough."""
-        new_warehouse_one = sokoban.Warehouse()
-        new_warehouse_one.extract_locations(state.split(sep="\n"))
-        new_warehouse_two = sokoban.Warehouse()
-        new_warehouse_two.extract_locations(self.goal.split(sep="\n"))
-        return set(new_warehouse_one.boxes) == set(new_warehouse_two.targets)
+        new_wh1 = sokoban.Warehouse()
+        new_wh1.extract_locations(state.split(sep="\n"))
+        new_wh2 = sokoban.Warehouse()
+        new_wh2.extract_locations(self.goal.split(sep="\n"))
+        return set(new_wh1.boxes) == set(new_wh2.targets)
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -377,19 +374,17 @@ class SokobanPuzzle(search.Problem):
         is such that the path doesn't matter, this function will only look at
         state2.  If the path does matter, it will consider c and maybe state1
         and action. The default method costs 1 for every step in the path."""
-        new_warehouse1 = sokoban.Warehouse()
-        new_warehouse1.extract_locations(state1.split(sep="\n"))
-        new_warehouse2 = sokoban.Warehouse()
-        new_warehouse2.extract_locations(state2.split(sep="\n"))
+        new_wh2 = sokoban.Warehouse()
+        new_wh2.extract_locations(state2.split(sep="\n"))
         if self.push_costs == None:
-            #normal situation
+            # normal situation
             return c + 1
         else:
-            #weight element move
+            # weight element move
             for i in range(len(self.ListofLocation)):
-                if self.ListofLocation[i] not in new_warehouse2.boxes:
+                if self.ListofLocation[i] not in new_wh2.boxes:
                     cost = self.push_costs[i]
-                    for (x, y) in new_warehouse2.boxes:
+                    for (x, y) in new_wh2.boxes:
                         if (x, y) not in self.ListofLocation:
                             self.ListofLocation[i] = (x, y)
                             return c + cost
@@ -399,26 +394,22 @@ class SokobanPuzzle(search.Problem):
     def h(self, n):
         heur = 0
         # print ('h function:n.state : \n'+ n.state+'\n')
-        new_warehouse = sokoban.Warehouse()
-        new_warehouse.extract_locations(n.state.split(sep="\n"))
-        for box in new_warehouse.boxes:
+        new_wh = sokoban.Warehouse()
+        new_wh.extract_locations(n.state.split(sep="\n"))
+        for box in new_wh.boxes:
                 # find the nearest target
-            closest_target = new_warehouse.targets[0]
-            for target in new_warehouse.targets:
-                if(mDist(target, box) < mDist(closest_target, box)):
+            closest_target = new_wh.targets[0]
+            for target in new_wh.targets:
+                if(manhattan_distance(target, box) < manhattan_distance(closest_target, box)):
                     closest_target = target
 
                  # updateHeuristic
-            heur = heur + mDist(closest_target, box)
+            heur = heur + manhattan_distance(closest_target, box)
 
         return heur
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-
-def mDist(loca_a, loca_b):
-    # return xy distance between two points
-    return abs((loca_a[0] - loca_b[0])) + abs((loca_a[1] - loca_b[1]))
 
 
 def check_elem_action_seq(warehouse, action_seq):
@@ -458,7 +449,7 @@ def check_elem_action_seq(warehouse, action_seq):
         elif step == 'Down':
             location_one = DOWN.go(location_one)
             location_two = DOWN.go(location_one)
-        #check if step legal
+        # check if step legal
         if location_one in warehouse.walls:
             return 'Impossible'
         if location_one in warehouse.boxes:
@@ -486,12 +477,10 @@ def solve_sokoban_elem(warehouse):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
-    # Enable taboo, no macro
     puzzle = SokobanPuzzle(warehouse, True, False)
     puzzleGoalState = warehouse.copy()
     if (set(puzzleGoalState.boxes) == set(puzzleGoalState.targets)):
         return []
-    # A_star
     puzzleSolution = search.astar_graph_search(puzzle)
     step_move = []
     if (puzzleSolution is None):
@@ -517,48 +506,13 @@ def can_go_there(warehouse, dst):
       True if the worker can walk to cell dst=(row,column) without pushing any box
       False otherwise
     '''
-    # Need to flip because the coordinate of the test and the warehouse is opposite
-    flipDst = (dst[1], dst[0])
+    destination = (dst[1], dst[0])
     path = search.astar_graph_search(
-        Travelling(warehouse.worker, flipDst, warehouse))
+        TempSokuban(warehouse.worker, destination, warehouse))
     if path is None:
         return False
     else:
         return True
-
-
-class Travelling(search.Problem):
-
-    def __init__(self, initial, goal, warehouse):
-        '''
-        Assign the passed values
-
-        @param
-            initial: the initial value of the worker
-            warehouse: the warehouse object
-            goal: the destination
-        '''
-        self.initial = initial
-        self.goal = goal
-        self.warehouse = warehouse
-
-    def actions(self, state):
-        listOfActions = []
-        for direct in (UP, RIGHT, DOWN, LEFT):
-            nextStep = direct.go(state)
-            if nextStep not in self.warehouse.walls and nextStep not in self.warehouse.boxes:
-                listOfActions.append(direct)
-        return listOfActions
-
-    def result(self, state, step):
-        position = state
-        position = step.go(position)
-        return position
-
-    def h(self, n):
-        state = n.state
-        curGoal = self.goal
-        return math.sqrt((state[0]-curGoal[0])**2+(state[1]-curGoal[1])**2)
 
 
 def solve_sokoban_macro(warehouse):
@@ -583,12 +537,11 @@ def solve_sokoban_macro(warehouse):
         Otherwise return M a sequence of macro actions that solves the puzzle.
         If the puzzle is already in a goal state, simply return []
     '''
-    
+
     puzzle = SokobanPuzzle(warehouse, True, True)
     puzzleGoalState = warehouse.copy()
     if (puzzleGoalState.boxes == puzzleGoalState.targets):
         return []
-    # A_star
     puzzleSolution = search.astar_graph_search(puzzle)
     step_move = []
     if (puzzleSolution is None):
@@ -635,7 +588,6 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
     puzzleGoalState = warehouse.copy()
     if (puzzleGoalState.boxes == puzzleGoalState.targets):
         return []
-    # A_star
     puzzleSolution = search.astar_graph_search(puzzle)
     step_move = []
     if (puzzleSolution is None):
@@ -656,6 +608,10 @@ class Way:
 
         self.name = name
         self.stack = stack
+        
+    def go(self, position):
+
+        return (position[0] + self.stack[0], position[1] + self.stack[1])
 
     def stack(self):
 
@@ -665,12 +621,49 @@ class Way:
 
         return str(self.name)
 
-    def go(self, position):
-
-        return (position[0] + self.stack[0], position[1] + self.stack[1])
+  
 
 
 UP = Way("Up", (0, -1))
 RIGHT = Way("Right", (1, 0))
 DOWN = Way("Down", (0, 1))
 LEFT = Way("Left", (-1, 0))
+
+
+class TempSokuban(search.Problem):
+
+    def __init__(self, initial, goal, warehouse):
+        '''
+        Assign the passed values
+
+        @param
+            initial: the initial value of the worker
+            warehouse: the warehouse object
+            goal: the destination
+        '''
+        self.initial = initial
+        self.goal = goal
+        self.warehouse = warehouse
+
+    def actions(self, state):
+        listOfActions = []
+        for direct in (UP, RIGHT, DOWN, LEFT):
+            nextStep = direct.go(state)
+            if nextStep not in self.warehouse.walls and nextStep not in self.warehouse.boxes:
+                listOfActions.append(direct)
+        return listOfActions
+
+    def result(self, state, step):
+        position = state
+        position = step.go(position)
+        return position
+
+    def h(self, n):
+        state = n.state
+        curGoal = self.goal
+        return math.sqrt((state[0]-curGoal[0])**2+(state[1]-curGoal[1])**2)
+
+
+def manhattan_distance (loca_a, loca_b):
+    # return xy distance between two points
+    return abs((loca_a[0] - loca_b[0])) + abs((loca_a[1] - loca_b[1]))
