@@ -564,16 +564,18 @@ class Pointer:
     def move_to(self, position):
 
         return (position[0] + self.heap[0], position[1] + self.heap[1])
+    
+    def __str__(self):
+
+        return str(self.pointer_name)
 
     def heap(self):
 
         return self.heap
 
-    def __str__(self):
+   
 
-        return str(self.pointer_name)
-
-
+#global class for direction pointer usage
 UP = Pointer("Up", (0, -1))
 RIGHT = Pointer("Right", (1, 0))
 DOWN = Pointer("Down", (0, 1))
@@ -603,7 +605,7 @@ class TempSokuban(search.Problem):
     def h(self, n):
         state = n.state
         curGoal = self.goal
-        return math.sqrt((state[0]-curGoal[0])**2+(state[1]-curGoal[1])**2)
+        return manhattan_distance(state, curGoal)
 
 
 def manhattan_distance (loca_a, loca_b):
