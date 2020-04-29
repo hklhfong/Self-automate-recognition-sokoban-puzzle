@@ -24,8 +24,6 @@ This is not negotiable!
 import search
 import sokoban
 
-# External library
-import math
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -63,21 +61,20 @@ def taboo_cells(warehouse):
     '''
     X, Y = zip(*warehouse.walls)
     x_size, y_size = 1+max(X), 1+max(Y)
-    
-    
+
     x_sym_list = []
     x_sym = []
     targets = []
-    left_walls = right_walls = up_walls =  down_walls = []
+    left_walls = right_walls = up_walls = down_walls = []
     str_puzzle = [[" "] * x_size for y in range(y_size)]
 
     first_row = 0
     first_col = 0
-   
+
     for (x, y) in warehouse.walls:
         str_puzzle[y][x] = "#"
 
-# find which side is the wall 
+# find which side is the wall
     for y in range(warehouse.nrows):
         first_col = True
         for x in range(warehouse.ncols):
@@ -113,24 +110,24 @@ def taboo_cells(warehouse):
                 if (x, y) in warehouse.targets:
                     targets.append((x, y))
                     continue
-                for x_direction in (LEFT,RIGHT):
-                    if x_direction.move_to((x,y)) in warehouse.walls and (x, y) not in warehouse.walls:
+                for x_direction in (LEFT, RIGHT):
+                    if x_direction.move_to((x, y)) in warehouse.walls and (x, y) not in warehouse.walls:
                         if (x, y-1) in warehouse.walls:
                             x_sym.append((x, y))
                             continue
                         if (x, y+1) in warehouse.walls:
                             x_sym.append((x, y))
                             continue
-                for y_direction in (UP,DOWN):
-                    if y_direction.move_to((x,y)) in warehouse.walls and (x, y) not in warehouse.walls:
+                for y_direction in (UP, DOWN):
+                    if y_direction.move_to((x, y)) in warehouse.walls and (x, y) not in warehouse.walls:
                         if (x-1, y) in warehouse.walls:
                             x_sym.append((x, y))
                             continue
                         if (x+1, y) in warehouse.walls:
                             x_sym.append((x, y))
                             continue
-                
-    
+
+
 # Creat a filter to determent outside or inside the wall
     for (col, row) in set(x_sym):
         for (left_col, left_row) in left_walls:
@@ -181,7 +178,7 @@ def taboo_cells(warehouse):
                 break
             temp_taboo_list.append((x, y+stack))
             stack = stack+1
-# Input taboo cell 
+# Input taboo cell
     for (x, y) in taboo_list:
         str_puzzle[y][x] = "X"
     return "\n".join(["".join(line) for line in str_puzzle])
@@ -190,14 +187,14 @@ def taboo_cells(warehouse):
 
 
 def taboo_reader(taboo_cells_str):
-    #reference from from_lines
+    # reference from from_lines
     lines = taboo_cells_str.split(sep='\n')
     first_row, first_col = None, None
     for row, line in enumerate(lines):
         brick_column = line.find('#')
         if brick_column >= 0:
             if first_row is None:
-                first_row = row  
+                first_row = row
             if first_col is None:
                 first_col = brick_column
             else:
@@ -248,8 +245,7 @@ class SokobanPuzzle(search.Problem):
         self.push_costs = push_costs
         self.goal = initial.copy(boxes=initial.targets).__str__()
         self.ListofLocation = initial.boxes
-        
-  
+
     def actions(self, state):
         """
         Return the list of actions that can be executed in the given state.
@@ -260,31 +256,31 @@ class SokobanPuzzle(search.Problem):
         """
         self.temp_sokoban.extract_locations(state.split(sep="\n"))
         action_list = []
-        taboo_cell = taboo_reader(taboo_cells( self.temp_sokoban))
+        taboo_cell = taboo_reader(taboo_cells(self.temp_sokoban))
         for direction in (UP, RIGHT, DOWN, LEFT):
             if self.macro:
-                for box in  self.temp_sokoban.boxes:
+                for box in self.temp_sokoban.boxes:
                     newLoc = direction.move_to(box)
-                    workerLoc = (box[1] - 1 * direction.heap[1], box[0] 
+                    workerLoc = (box[1] - 1 * direction.heap[1], box[0]
                                  - 1 * direction.heap[0])
-                    if can_go_there( self.temp_sokoban, workerLoc) and newLoc not in  self.temp_sokoban.walls and newLoc not in  self.temp_sokoban.boxes:
-                            if self.allow_taboo_push:
+                    if can_go_there(self.temp_sokoban, workerLoc) and newLoc not in self.temp_sokoban.walls and newLoc not in self.temp_sokoban.boxes:
+                        if self.allow_taboo_push:
+                            action_list.append((box, direction))
+                        else:
+                            if newLoc not in taboo_reader(taboo_cells
+                                                          (self.temp_sokoban)):
                                 action_list.append((box, direction))
-                            else:
-                                if newLoc not in taboo_reader(taboo_cells
-                                                                  ( self.temp_sokoban)):
-                                    action_list.append((box, direction))
             else:
-                loc_one = loc_two =  self.temp_sokoban.worker
+                loc_one = loc_two = self.temp_sokoban.worker
                 loc_one = direction.move_to(loc_one)
                 loc_two = direction.move_to(loc_one)
-                if loc_one in  self.temp_sokoban.boxes and loc_two not in  self.temp_sokoban.boxes and loc_two not in  self.temp_sokoban.walls:
-                        if self.allow_taboo_push:
+                if loc_one in self.temp_sokoban.boxes and loc_two not in self.temp_sokoban.boxes and loc_two not in self.temp_sokoban.walls:
+                    if self.allow_taboo_push:
+                        action_list.append(direction)
+                    else:
+                        if loc_two not in taboo_cell:
                             action_list.append(direction)
-                        else:      
-                            if loc_two not in taboo_cell:
-                                action_list.append(direction)
-                if loc_one not in  self.temp_sokoban.boxes and loc_one not in  self.temp_sokoban.walls:
+                if loc_one not in self.temp_sokoban.boxes and loc_one not in self.temp_sokoban.walls:
                     action_list.append(direction)
         return action_list
 
@@ -357,7 +353,6 @@ class SokobanPuzzle(search.Problem):
         return heur
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 
 
 def check_elem_action_seq(warehouse, action_seq):
@@ -531,7 +526,7 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
             For example, ['Left', 'Down', Down','Right', 'Up', 'Down']
             If the puzzle is already in a goal state, simply return []
     '''
-    
+
     puzzle = SokobanPuzzle(warehouse, True, False, push_costs)
 
     temp_warehouse = warehouse.copy()
@@ -546,25 +541,25 @@ def solve_weighted_sokoban_elem(warehouse, push_costs):
         for node in puzzle_ans.path():
             step_move.append(node.action.__str__())
         action_seq = step_move[1:]
-    
+
         if check_elem_action_seq(temp_warehouse, action_seq) == 'Impossible':
             return 'Impossible'
         else:
             return action_seq
 
 
-#------------------other functions-------------------
+# ------------------other functions-------------------
 class Pointer:
 
     def __init__(self, pointer_name, heap):
 
         self.pointer_name = pointer_name
         self.heap = heap
-        
+
     def move_to(self, position):
 
         return (position[0] + self.heap[0], position[1] + self.heap[1])
-    
+
     def __str__(self):
 
         return str(self.pointer_name)
@@ -573,9 +568,8 @@ class Pointer:
 
         return self.heap
 
-   
 
-#global class for direction pointer usage
+# global class for direction pointer usage
 UP = Pointer("Up", (0, -1))
 RIGHT = Pointer("Right", (1, 0))
 DOWN = Pointer("Down", (0, 1))
@@ -608,6 +602,6 @@ class TempSokuban(search.Problem):
         return manhattan_distance(state, curGoal)
 
 
-def manhattan_distance (loca_a, loca_b):
+def manhattan_distance(loca_a, loca_b):
     # return xy distance between two points
     return abs((loca_a[0] - loca_b[0])) + abs((loca_a[1] - loca_b[1]))
